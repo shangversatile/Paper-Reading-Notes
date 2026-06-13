@@ -9,7 +9,7 @@ Calibration, Uncertainty Quantification and Risk-Aware Decision-Making.
 
 This topic connects forecasting baselines, uncertainty quantification, conformal prediction, distribution-shift stress testing, and risk-aware decision layers.
 
-The topic is currently in research-protocol initialization. No papers, results, or advisor claims should be treated as verified until the relevant source and verification date are recorded.
+The topic is currently in research-protocol initialization. No paper metadata, technical claims, or results should be treated as verified until the relevant source and verification date are recorded.
 
 ## Connection to Project Work
 

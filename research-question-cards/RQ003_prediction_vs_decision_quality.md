@@ -40,9 +40,9 @@ Decision-cost definitions may be oversimplified, and policy conclusions may not 
 
 To be populated only after primary sources are verified.
 
-## Advisor Connections
+## Research Context
 
-Candidate connections: risk-aware decision-making, forecast-decision-control, environmental resource allocation.
+Relevant contexts: risk-aware decision-making, forecast-decision-control, and environmental resource allocation.
 
 ## MVP or Extension
 

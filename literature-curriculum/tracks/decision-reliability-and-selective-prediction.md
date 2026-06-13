@@ -31,5 +31,6 @@ Decision reliability connects model evaluation to operational trustworthiness an
 
 ## Reading Queue
 
-| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Advisor Connection | Primary Source Verified | Status |
+| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Research Context | Primary Source Verified | Status |
 | -------- | ----- | ------------ | -------- | ------------------ | ------------------------- | ------------------ | ----------------------- | ------ |
+| 1 | P-SEL-001 | Tier 1 | Integrated reject-option and risk-coverage framing | TBD after reading | Selective prediction and human-review policy | General methodological foundation | Yes | Queued |

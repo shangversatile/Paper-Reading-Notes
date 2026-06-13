@@ -40,9 +40,9 @@ Thresholds may overfit validation data, and human-review simulations may not ref
 
 To be populated only after primary sources are verified.
 
-## Advisor Connections
+## Research Context
 
-Candidate connections: abstention, failure analysis, decision reliability, and alert escalation.
+Relevant contexts: abstention, failure analysis, decision reliability, and alert escalation.
 
 ## MVP or Extension
 

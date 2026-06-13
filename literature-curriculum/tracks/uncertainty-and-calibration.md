@@ -30,5 +30,8 @@ Uncertainty and calibration are central to reliable AI systems, selective predic
 
 ## Reading Queue
 
-| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Advisor Connection | Primary Source Verified | Status |
+| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Research Context | Primary Source Verified | Status |
 | -------- | ----- | ------------ | -------- | ------------------ | ------------------------- | ------------------ | ----------------------- | ------ |
+| 1 | P-UQ-001 | Tier 0, Tier 1 | Approximate Bayesian interpretation of dropout uncertainty | TBD after reading | MC Dropout relearning and inference-time sampling protocol | General methodological foundation | Yes | Queued |
+| 2 | P-UQ-002 | Tier 1 | Strong and scalable uncertainty baseline | TBD after reading | Deep Ensemble implementation specification and runtime comparison | General methodological foundation | Yes | Queued |
+| 3 | P-EVAL-001 | Tier 0 | Foundation for evaluating probabilistic forecasts | TBD after reading | CRPS, sharpness, and probabilistic evaluation protocol | General methodological foundation | Yes | Queued |

@@ -34,15 +34,15 @@ MAE, RMSE, MAPE, coverage, coverage gap, interval width, sharpness, CRPS, and fa
 
 ## Risks
 
-Shift definitions may be too artificial, split leakage may distort conclusions, and old thesis scripts may not be reproducible without audit.
+Shift definitions may be too artificial, split leakage may distort conclusions, and prior prototype scripts may not be reproducible without audit.
 
 ## Related Papers
 
 To be populated only after primary sources are verified.
 
-## Advisor Connections
+## Research Context
 
-Candidate connections: robustness, environmental forecasting, dynamic shift, failure analysis.
+Relevant contexts: robustness, environmental forecasting, dynamic shift, and failure analysis.
 
 ## MVP or Extension
 

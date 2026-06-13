@@ -4,11 +4,10 @@
 
 The curriculum is broader than the current flagship project.
 
-The curriculum is not restricted to target-advisor publications.
-
 Papers enter the curriculum because of research-learning value.
 
-Advisor connection is optional metadata.
+Optional contextual relevance may be recorded when it helps explain
+the connection between a paper and an active research direction.
 
 The curriculum should support long-term development in reliable AI,
 representation analysis, ML systems for evaluation and monitoring,
@@ -23,7 +22,7 @@ and LLM evaluation and alignment.
 5. relevance to an active or likely future research question
 6. reproducibility value
 7. frontier value
-8. optional advisor relevance
+8. optional research-context relevance
 
 ## Boundary Rule
 

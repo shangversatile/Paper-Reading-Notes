@@ -30,5 +30,6 @@ Representation analysis can support future work on reliability diagnostics, late
 
 ## Reading Queue
 
-| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Advisor Connection | Primary Source Verified | Status |
+| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Research Context | Primary Source Verified | Status |
 | -------- | ----- | ------------ | -------- | ------------------ | ------------------------- | ------------------ | ----------------------- | ------ |
+| 1 | P-REP-001 | Tier 1 | CKA-based representation similarity analysis | TBD after reading | Week 7 representation-stability extension | General methodological foundation | Yes | Queued |

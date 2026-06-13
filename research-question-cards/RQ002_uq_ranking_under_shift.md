@@ -40,9 +40,9 @@ Unfair compute budgets, invalid conformal split assumptions, and unverified cali
 
 To be populated only after primary sources are verified.
 
-## Advisor Connections
+## Research Context
 
-Candidate connections: conformal coverage, Bayesian UQ, statistical guarantees, and reliability under shift.
+Relevant contexts: conformal coverage, Bayesian UQ, statistical guarantees, and reliability under shift.
 
 ## MVP or Extension
 

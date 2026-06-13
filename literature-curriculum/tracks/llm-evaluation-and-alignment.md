@@ -29,5 +29,5 @@ LLM evaluation and alignment are likely future reliable AI directions and should
 
 ## Reading Queue
 
-| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Advisor Connection | Primary Source Verified | Status |
+| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Research Context | Primary Source Verified | Status |
 | -------- | ----- | ------------ | -------- | ------------------ | ------------------------- | ------------------ | ----------------------- | ------ |

@@ -29,5 +29,5 @@ MLSys evaluation and monitoring are necessary for reliable AI systems beyond a s
 
 ## Reading Queue
 
-| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Advisor Connection | Primary Source Verified | Status |
+| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Research Context | Primary Source Verified | Status |
 | -------- | ----- | ------------ | -------- | ------------------ | ------------------------- | ------------------ | ----------------------- | ------ |

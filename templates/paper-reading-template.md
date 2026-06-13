@@ -20,11 +20,11 @@ TBD
 
 TBD
 
-## Why This Paper Matters Independently of Advisor Fit
+## Why This Paper Matters
 
 TBD
 
-## Optional Advisor Connection
+## Optional Research Context
 
 TBD
 

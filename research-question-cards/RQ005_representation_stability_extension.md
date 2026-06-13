@@ -40,9 +40,9 @@ Representation changes may be difficult to interpret, and apparent stability may
 
 To be populated only after primary sources are verified.
 
-## Advisor Connections
+## Research Context
 
-Candidate connections: latent state, invariance, intervention, and representation stability.
+Relevant contexts: latent state, invariance, intervention, and representation stability.
 
 ## MVP or Extension
 

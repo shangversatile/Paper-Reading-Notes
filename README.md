@@ -2,42 +2,47 @@
 
 ## Purpose
 
-This repository is not a collection of advisor papers or paper summaries.
+This repository is a structured research reading and synthesis workspace.
 
-It is a research-learning system for building durable understanding,
-identifying open questions, designing executable experiments,
-and maintaining evidence-based advisor intelligence.
+It supports the development of durable technical understanding,
+critical reading habits, reproducible research questions,
+and executable experimental ideas across reliable machine learning
+and related areas.
 
-## Two Complementary Layers
-
-### Literature Curriculum
-
-A long-term research curriculum independent of any single advisor.
-It prioritizes foundational, canonical, frontier, and high-learning-value papers.
-
-### Advisor Intelligence
-
-A separate evidence layer for understanding advisor fit,
-recent research directions, contact gates, and concrete project entry points.
-
-Advisor relevance must not determine whether a paper is worth learning.
-
-## Active Project Topic
-
-Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift:
-Calibration, Uncertainty Quantification and Risk-Aware Decision-Making.
-
-## Evidence Pipeline
+## Research Workflow
 
 Paper
 → Concepts and Assumptions
-→ Critical Reading
+→ Critical Analysis
 → Open Question
 → Testable Hypothesis
-→ Minimal Experiment
+→ Reproduction or Minimal Experiment
 → Research Output
-→ Optional Advisor Connection
 
-## Boundary Rule
+## Current Focus
 
-Do not add paper claims, advisor facts, or URLs before source verification.
+Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift:
+Calibration, Uncertainty Quantification, and Risk-Aware Decision-Making.
+
+## Literature Curriculum
+
+The reading curriculum includes foundational, canonical, frontier,
+and application-relevant work.
+
+Papers are selected based on conceptual importance,
+methodological influence, evaluation value, reproducibility value,
+and relevance to active or likely future research questions.
+
+## Repository Structure
+
+* `literature-curriculum/`: long-term reading tracks and verified paper index
+* `topics/`: project-specific reading maps and terminology
+* `papers/`: verified paper notes and critical reading records
+* `research-question-cards/`: candidate questions, hypotheses, and minimal experiments
+* `backlog/`: deferred research directions and activation gates
+* `templates/`: reusable reading and research-question templates
+
+## Verification Rule
+
+Paper metadata, source links, and technical claims are added only
+after primary-source verification.

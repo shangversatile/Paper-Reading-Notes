@@ -31,5 +31,7 @@ Distribution-shift analysis is a core reliable AI capability across forecasting,
 
 ## Reading Queue
 
-| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Advisor Connection | Primary Source Verified | Status |
+| Priority | Paper | Reading Tier | Why Read | Reproduction Value | Active Project Connection | Research Context | Primary Source Verified | Status |
 | -------- | ----- | ------------ | -------- | ------------------ | ------------------------- | ------------------ | ----------------------- | ------ |
+| 1 | P-SHIFT-001 | Tier 1 | Benchmark evidence that uncertainty quality must be evaluated under shift | TBD after reading | Shared stress-test protocol and failure analysis | General methodological foundation | Yes | Queued |
+| 2 | P-AQ-001 | Tier 2 | Frontier watchlist for realistic structured missingness and deployment conditions | TBD after reading | Post-MVP external evaluation watchlist only | General methodological foundation | Yes | Queued |
