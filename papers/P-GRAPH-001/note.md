@@ -267,6 +267,82 @@ The graph-quality result is especially important. It implies that graph construc
 
 Therefore, graph perturbation and graph construction comparison should become later stress-test dimensions. A reliable model should not only perform well on one chosen graph; its error, coverage, and decision cost should be examined under plausible alternative graphs and controlled graph corruption.
 
+## My Current Understanding and Open Confusions
+
+### 1. Reinterpreting CNN Assumptions on Graph-Structured Spatiotemporal Data
+
+A key lesson from this paper is that CNN assumptions do not transfer automatically from images to graph-structured spatiotemporal data.
+
+For images, locality is almost built into the data representation. A pixel grid gives each pixel a stable and meaningful neighborhood. In spatiotemporal graph data, however, locality must be justified by the graph construction. For PM2.5 forecasting, an edge may represent geographical distance, historical correlation, meteorological similarity, wind-driven transport, domain knowledge, or a hybrid relation. Therefore, graph locality is not a free assumption; it is a modeling decision that requires evidence.
+
+For images, stationarity means that similar local visual patterns, such as edges, textures, colors, or strokes, can be recognized across different spatial positions using shared filters. In spatiotemporal forecasting, this sharing assumption is less obvious. The same local pattern may not have the same meaning across different cities, seasons, terrain types, or pollution regimes. A shared graph filter may therefore impose a stronger inductive bias than expected.
+
+For images, compositionality is also relatively natural: edges combine into shapes, shapes combine into object parts, and object parts combine into objects. For spatiotemporal graphs, the relationship between local and global structure is more fragile. Local station interactions may or may not compose into meaningful regional pollution dynamics. The boundary of the learned rule must therefore be checked, especially under distribution shift.
+
+This changes how I should read graph convolution. A graph convolution layer is not merely a neural-network operation. It is a claim that the chosen graph makes locality, parameter sharing, and hierarchical composition meaningful for the target task.
+
+### 2. What Spectral Convolution Is Trying to Solve
+
+My current confusion is mainly about spectral convolution. The key clarification is that spectral convolution is not introduced because the paper directly targets spatiotemporal forecasting. Instead, it is introduced because convolution is hard to define on irregular graph domains.
+
+In images, a convolution kernel can slide over a regular grid. The local neighborhood has a stable shape and ordering. On a graph, neighborhoods have variable sizes and no canonical ordering. There is no unique translation operator in the vertex domain.
+
+The spectral approach avoids defining convolution by spatial translation. It uses the graph Laplacian to define graph Fourier modes. These modes provide a frequency-like coordinate system determined by the graph structure itself. A graph signal can then be filtered by transforming it into graph frequency space, modifying its frequency components, and transforming it back.
+
+The important intuition is:
+
+```text
+The graph Laplacian defines what smoothness means on a graph.
+Spectral filtering modifies graph signals according to graph-defined frequencies.
+```
+
+Low-frequency graph signals vary smoothly across connected nodes. High-frequency graph signals vary sharply across connected nodes. For PM2.5 forecasting, this means that the meaning of "smooth" or "rough" depends entirely on how the station graph is constructed.
+
+### 3. Why Polynomial Spectral Filters Matter
+
+A naive spectral filter is not enough because it can be non-local and computationally expensive. The paper's key move is to restrict filters to polynomials of the graph Laplacian.
+
+A polynomial filter such as:
+
+```text
+g_θ(L) = Σ_{k=0}^{K-1} θ_k L^k
+```
+
+has a clear graph interpretation. Since `L` propagates information across graph edges, powers of `L` correspond to repeated neighborhood propagation. A K-order polynomial filter is therefore localized within a K-hop neighborhood.
+
+This makes `K` more than a numerical hyperparameter. In a station graph, `K` encodes an assumption about how far spatial information should propagate through the graph. If `K` is too small, the model may miss long-range pollution transport. If `K` is too large, the model may mix unrelated stations and amplify noisy or misleading dependencies.
+
+### 4. Why Chebyshev Approximation Matters
+
+The Chebyshev approximation makes the spectral idea computationally usable. Direct spectral filtering requires the graph Fourier basis, which depends on eigendecomposition of the graph Laplacian. This is expensive and does not scale well.
+
+Chebyshev recurrence allows the filter to be computed through repeated sparse matrix-vector multiplications. This avoids explicitly computing the Fourier basis and gives complexity approximately proportional to:
+
+```text
+O(K|E|)
+```
+
+where `K` is the filter support size and `|E|` is the number of graph edges.
+
+This is why the paper is important for later STGCN-style models: it turns spectral graph convolution from an elegant definition into a practical layer.
+
+### 5. How This Should Influence My PM2.5 Project
+
+This paper does not prove that spectral graph convolution is automatically suitable for PM2.5 forecasting. Instead, it tells me what must be justified before using graph convolution responsibly.
+
+For my project, the key questions become:
+
+1. What does an edge in the PM2.5 station graph mean?
+2. Does the graph make PM2.5 signals locally smooth in a meaningful way?
+3. Are local pollution patterns shared across different regions and regimes?
+4. Does the chosen graph remain valid under temporal shift, missingness, spikes, or extreme events?
+5. Does graph construction affect not only MAE/RMSE, but also calibration, coverage, and decision cost?
+6. Can graph mismatch become a source of reliability failure?
+
+The most important research implication is that graph construction should be treated as part of reliability evaluation. If the graph is wrong, the graph convolution layer may propagate misleading information even when the architecture is implemented correctly.
+
+A later stress test should compare different graph constructions, such as distance-based graphs, correlation-based graphs, meteorology-informed graphs, and perturbed or randomized graphs. The comparison should not only report prediction error, but also uncertainty calibration, coverage degradation, and downstream decision cost.
+
 ## Questions for My Project
 
 1. What should an edge represent in a PM2.5 station graph?
