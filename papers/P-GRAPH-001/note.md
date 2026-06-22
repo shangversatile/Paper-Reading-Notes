@@ -601,6 +601,134 @@ This gives a concrete research direction:
 
 Graph construction should be evaluated as part of reliability analysis. A reliable spatiotemporal forecasting project should compare different graph definitions and test whether graph mismatch changes not only predictive accuracy, but also uncertainty quality and decision reliability.
 
+## Clarifying the Meaning of $g_\theta(\Lambda)$ and Graph Filtering
+
+### 1. Frequency Positions, Spectral Coefficients, and Filter Response
+
+A key clarification is that $\Lambda$, $U^T\mathbf{x}$, and $g_\theta(\Lambda)$ play different roles.
+
+The eigenvalue matrix
+
+$$
+\Lambda=\mathrm{diag}(\lambda_1,\lambda_2,\ldots,\lambda_n)
+$$
+
+defines the graph frequency positions. These frequencies are determined by the graph Laplacian and therefore by the graph structure. In the logic of Section 2.1, $\Lambda$ comes from the eigendecomposition of $L$ and fixes the graph-frequency coordinate system.
+
+The graph Fourier transform
+
+$$
+\hat{\mathbf{x}}=U^T\mathbf{x}
+$$
+
+gives the spectral coefficients of the input signal. The coefficient $\hat{x}_k$ tells how much of the input signal lies along the $k$-th graph Fourier mode. For a PM2.5 station graph, this describes how much the current pollution field aligns with each graph-induced spatial variation pattern.
+
+The filter response
+
+$$
+g_\theta(\Lambda)
+$$
+
+does not define the frequencies themselves. Instead, it defines how strongly the model keeps, suppresses, or amplifies each frequency component. This is the learnable part of the spectral filtering step, not the graph frequency axis itself.
+
+The basic spectral filtering operation is:
+
+$$
+\mathbf{y}=Ug_\theta(\Lambda)U^T\mathbf{x}.
+$$
+
+Equivalently, in the graph Fourier domain:
+
+$$
+\hat{\mathbf{y}}=g_\theta(\Lambda)\hat{\mathbf{x}}.
+$$
+
+For each graph frequency, this means:
+
+$$
+\hat{y}_k=g_\theta(\lambda_k)\hat{x}_k.
+$$
+
+Thus:
+
+* $\lambda_k$ is the position of the $k$-th graph frequency.
+* $\hat{x}_k$ is the amount of the input signal at that frequency.
+* $g_\theta(\lambda_k)$ is the learned response to that frequency.
+* $\hat{y}_k$ is the filtered spectral coefficient.
+
+This distinction prevents an important misunderstanding: a signal having strong high-frequency components does not automatically mean high frequencies are useful for the task.
+
+### 2. What the Filter Learns
+
+The filter learns a task-dependent frequency response. It does not simply detect whether the input has low, middle, or high frequency. Instead, through training, it learns which frequency components help reduce the loss.
+
+If a certain frequency band consistently helps the task, the learned response may preserve or amplify it. If a frequency band behaves like noise, instability, or irrelevant variation, the learned response may suppress it.
+
+In this sense, the filter is analogous to a CNN kernel. A CNN kernel does not merely observe that an image has edges or textures. It learns which local patterns are useful for the task. Similarly, a graph spectral filter learns which graph variation modes are useful for the task.
+
+### 3. High-Frequency Content Is Not the Same as High-Frequency Usefulness
+
+For a graph signal $\mathbf{x}$, large high-frequency coefficients in $\hat{\mathbf{x}}$ mean that the signal varies sharply across graph edges. In PM2.5 forecasting, this may correspond to local pollution spikes, sensor noise, spatial discontinuities, or graph mismatch.
+
+However, whether these high-frequency components are useful depends on the task and the training objective.
+
+If high-frequency components mostly represent noise, the learned filter should suppress them:
+
+$$
+g_\theta(\lambda_k)\approx 0
+$$
+
+for large $\lambda_k$.
+
+If high-frequency components represent meaningful local anomalies or sharp pollution boundaries, the learned filter may preserve or amplify them:
+
+$$
+g_\theta(\lambda_k)>1
+$$
+
+for some high-frequency modes.
+
+Therefore, high-frequency content in the input is a property of the signal. High-frequency usefulness is a property learned from data and loss.
+
+### 4. Non-Parametric Filter as a Fully Free Frequency Response
+
+The paper first introduces a non-parametric spectral filter:
+
+$$
+g_\theta(\Lambda)=\mathrm{diag}(\theta),
+$$
+
+where
+
+$$
+\theta\in\mathbb{R}^n.
+$$
+
+This means each graph frequency receives its own independent parameter:
+
+$$
+\hat{y}_k=\theta_k\hat{x}_k.
+$$
+
+This form is highly expressive because every frequency can be controlled separately. However, the paper points out two major problems:
+
+1. It is not localized in the vertex domain.
+2. Its learning complexity is $O(n)$.
+
+This is why the paper later introduces polynomial parametrization. The goal is not merely to learn arbitrary frequency weights, but to learn graph filters that are localized, efficient, and CNN-like.
+
+### 5. PM2.5 Research Interpretation
+
+For PM2.5 station graphs, this distinction is important.
+
+The graph Laplacian defines what counts as low-frequency or high-frequency variation. The input signal determines how much pollution variation lies in each graph frequency. The learned filter determines which of these variation modes are useful for forming predictive node features.
+
+Low-frequency modes may correspond to broad regional pollution trends. Middle-frequency modes may correspond to city-cluster-level spatial structure. High-frequency modes may correspond to local spikes, anomalies, sensor noise, or graph mismatch.
+
+However, these interpretations are not guaranteed by the architecture. They depend on whether the graph construction is meaningful. If the graph is wrong, then the frequency basis is wrong, and the learned filter may preserve or suppress misleading graph modes.
+
+For reliable PM2.5 forecasting, this implies that graph construction and learned frequency response should be evaluated together. A model may appear accurate under standard error metrics while relying on unstable or misleading graph-frequency patterns that fail under distribution shift.
+
 ## Questions for My Project
 
 1. What should an edge represent in a PM2.5 station graph?
