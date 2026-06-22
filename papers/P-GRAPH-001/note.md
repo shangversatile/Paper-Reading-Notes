@@ -116,7 +116,7 @@ For forecasting, this matters because the graph defines which spatial patterns a
 A direct non-parametric spectral filter can be written as:
 
 $$
-g_\theta(\Lambda)=\operatorname{diag}(\theta).
+g_\theta(\Lambda)=\mathrm{diag}(\theta).
 $$
 
 Here, $\theta$ contains one learnable parameter per graph frequency. This formula solves the definitional problem of spectral filtering, but it is not a good scalable graph CNN layer. For PM2.5 station graphs, this would make the filter tightly dependent on the eigensystem of one constructed graph.
@@ -469,7 +469,7 @@ $$
 and the eigenvalue matrix is:
 
 $$
-\Lambda=\operatorname{diag}(\lambda_1,\lambda_2,\ldots,\lambda_n).
+\Lambda=\mathrm{diag}(\lambda_1,\lambda_2,\ldots,\lambda_n).
 $$
 
 Here, each $\mathbf{u}_k$ is an orthonormal eigenvector and each $\lambda_k$ is its corresponding eigenvalue. These symbols define the graph Fourier coordinate system in Section 2.1. In PM2.5 forecasting, each $\mathbf{u}_k$ is a station-level variation pattern induced by the chosen graph.
