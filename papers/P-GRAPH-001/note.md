@@ -729,6 +729,147 @@ However, these interpretations are not guaranteed by the architecture. They depe
 
 For reliable PM2.5 forecasting, this implies that graph construction and learned frequency response should be evaluated together. A model may appear accurate under standard error metrics while relying on unstable or misleading graph-frequency patterns that fail under distribution shift.
 
+## Why Non-Parametric Spectral Filters Are Not Localized
+
+### 1. Frequency-Domain Simplicity Does Not Imply Node-Space Locality
+
+The paper first introduces the non-parametric spectral filter:
+
+$$
+g_\theta(\Lambda)=\mathrm{diag}(\theta),
+$$
+
+where
+
+$$
+\theta\in\mathbb{R}^n.
+$$
+
+In the graph Fourier domain, this looks simple:
+
+$$
+\hat{y}_k=\theta_k\hat{x}_k.
+$$
+
+This means that each graph frequency component receives an independent learned scaling coefficient.
+
+However, locality is not judged in the graph Fourier domain. Locality is judged in the node domain. The node-space linear operator is:
+
+$$
+A=g_\theta(L)=U\mathrm{diag}(\theta)U^T.
+$$
+
+Although $g_\theta(\Lambda)$ is diagonal in the spectral basis, $A$ is generally dense in the node basis. This is why a frequency-domain diagonal filter does not automatically behave like a local convolution kernel over graph nodes.
+
+### 2. Expanding the Node-Space Operator
+
+The $(i,j)$ entry of $A$ is:
+
+$$
+A_{ij}=\sum_{k=1}^{n}\theta_k U_{ik}U_{jk}.
+$$
+
+Therefore, the output at node $i$ is:
+
+$$
+y_i=\sum_{j=1}^{n}A_{ij}x_j
+=\sum_{j=1}^{n}
+\left(
+\sum_{k=1}^{n}
+\theta_k U_{ik}U_{jk}
+\right)
+x_j.
+$$
+
+This shows that node $i$ may depend on many or even all nodes $j$ in the graph.
+
+The reason is that Laplacian eigenvectors are usually global graph modes. They are not generally sparse one-node or one-neighborhood patterns. Therefore, after transforming back from spectral space to node space, the filter may mix information from distant nodes.
+
+The key point is:
+
+Frequency-domain diagonal does not mean node-domain local.
+
+### 3. Locality Requirement for a CNN-Like Graph Filter
+
+A CNN-like graph filter should satisfy a locality condition. If the graph distance between node $i$ and node $j$ is greater than $K$, then node $j$ should not directly influence the output at node $i$:
+
+$$
+A_{ij}=0
+\quad
+\mathrm{when}
+\quad
+d_G(i,j)>K.
+$$
+
+A non-parametric spectral filter does not guarantee this condition.
+
+Even though it is flexible in frequency space, it does not ensure compact support in node space. This is why the paper says non-parametric spectral filters are not localized.
+
+### 4. Delta Signal Interpretation
+
+A useful way to understand localization is to apply the filter to a delta signal.
+
+Let $\boldsymbol{\delta}_i$ be a signal that is $1$ at node $i$ and $0$ elsewhere. Then:
+
+$$
+g_\theta(L)\boldsymbol{\delta}_i
+$$
+
+is the graph filter kernel centered at node $i$.
+
+If the filter is localized, this output should be nonzero only around node $i$.
+
+But for the non-parametric spectral filter,
+
+$$
+g_\theta(L)\boldsymbol{\delta}_i
+=U\mathrm{diag}(\theta)U^T\boldsymbol{\delta}_i,
+$$
+
+the response may be spread across many nodes. This means that a signal placed at one node can influence distant nodes after filtering.
+
+### 5. Why This Motivates Polynomial Filters
+
+The paper wants graph filters that are closer to CNN kernels:
+
+* local in the node domain;
+* parameter-efficient;
+* efficient to compute;
+* reusable across the graph.
+
+The non-parametric filter is too free. It gives every graph frequency an independent parameter, so its learning complexity is $O(n)$. It also does not guarantee spatial localization.
+
+This motivates the polynomial parametrization:
+
+$$
+g_\theta(\Lambda)=\sum_{k=0}^{K-1}\theta_k\Lambda^k.
+$$
+
+Using the eigendecomposition of the Laplacian, this corresponds to the node-space operator:
+
+$$
+g_\theta(L)=\sum_{k=0}^{K-1}\theta_k L^k.
+$$
+
+This is important because powers of $L$ have graph-local support: $L^k$ can only connect nodes within approximately $k$ graph hops. Therefore, polynomial filters constrain the spectral filter to become localized in the node domain.
+
+### 6. PM2.5 Research Interpretation
+
+For PM2.5 station graphs, non-parametric spectral filters are risky because a station's output may directly depend on distant stations in ways that are not physically or meteorologically justified.
+
+This can weaken interpretability and reliability. The model may exploit global spectral mixing that performs well on a standard split but fails under distribution shift, missingness, spikes, or graph mismatch.
+
+A polynomial filter is more research-friendly because it makes the spatial dependency range explicit. The order $K$ becomes a modeling assumption: it represents the assumed graph-hop range of useful spatial dependency.
+
+This means $K$ should not be treated merely as a hyperparameter. It should be analyzed as part of the reliability protocol:
+
+* Does a small $K$ miss long-range pollution transport?
+* Does a large $K$ mix unrelated stations?
+* Does the best $K$ change under temporal shift?
+* Does graph mismatch change calibration, coverage, or decision cost?
+
+In this sense, polynomial filtering connects the mathematical definition of graph convolution to reliability evaluation.
+
 ## Questions for My Project
 
 1. What should an edge represent in a PM2.5 station graph?
