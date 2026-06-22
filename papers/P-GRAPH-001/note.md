@@ -45,79 +45,87 @@ This move solves the conceptual definition problem, but not the engineering prob
 
 Let the graph be:
 
-```text
-G = (V, E, W)
-```
+$$
+G=(V,E,W).
+$$
 
-where `V` is the node set, `E` is the edge set, and `W` is the weighted adjacency matrix. A graph signal is:
+Here, $V$ is the node set, $E$ is the edge set, and $W$ is the weighted adjacency matrix. This is the paper's starting point for replacing regular-grid convolution with graph-domain filtering. In a PM2.5 station graph, nodes are monitoring stations and $W_{ij}$ records the chosen connection strength between stations $i$ and $j$.
 
-```text
-x ∈ R^n
-```
+A graph signal is:
 
-where each entry of `x` is a value attached to one graph node. In PM2.5 forecasting, a graph signal could represent pollution measurements across monitoring stations at a fixed time.
+$$
+\mathbf{x}\in\mathbb{R}^n.
+$$
+
+Each entry $x_i$ is a value attached to one graph node. This lets the paper treat graph data as a signal over vertices. In PM2.5 forecasting, $\mathbf{x}$ could represent pollution measurements across all monitoring stations at a fixed time.
 
 The unnormalized graph Laplacian is:
 
-```text
-L = D - W
-```
+$$
+L=D-W.
+$$
 
-where `D` is the degree matrix. The normalized graph Laplacian is:
+Here, $D$ is the degree matrix and $W$ is the weighted adjacency matrix. This formula gives the paper the graph operator that measures local variation. In a PM2.5 station graph, $L$ encodes which station differences are treated as local disagreements under the selected graph.
 
-```text
-L = I_n - D^{-1/2} W D^{-1/2}
-```
+The normalized graph Laplacian is:
 
-The Laplacian encodes graph geometry. It penalizes differences between connected nodes, so its eigenvectors describe patterns ranging from smooth over the graph to rapidly varying across edges.
+$$
+L=I_n-D^{-1/2}WD^{-1/2}.
+$$
+
+Here, $I_n$ is the $n$ by $n$ identity matrix, and the degree normalization rescales adjacency by node connectivity. The paper uses the Laplacian because it encodes graph geometry. It penalizes differences between connected nodes, so its eigenvectors describe patterns ranging from smooth over the graph to rapidly varying across edges. For PM2.5, the choice between unnormalized and normalized $L$ changes how highly connected stations influence spatial filtering.
 
 Because the Laplacian is symmetric for an undirected weighted graph, it can be decomposed as:
 
-```text
-L = UΛU^T
-```
+$$
+L=U\Lambda U^T.
+$$
 
-Here, `U` contains the graph Fourier modes and `Λ` contains the corresponding graph frequencies. The graph Fourier transform is:
+Here, $U$ contains the graph Fourier modes and $\Lambda$ contains the corresponding graph frequencies. This eigendecomposition is the bridge from graph geometry to spectral filtering in Section 2.1. For PM2.5, changing the station graph changes $L$, which changes $U$, $\Lambda$, and therefore the meaning of graph frequency.
 
-```text
-x_hat = U^T x
-```
+The graph Fourier transform is:
 
-and the inverse transform is:
+$$
+\hat{\mathbf{x}}=U^T\mathbf{x}.
+$$
 
-```text
-x = U x_hat
-```
+Here, $\hat{\mathbf{x}}$ contains the coefficients of $\mathbf{x}$ in the Laplacian eigenbasis. The transform lets the paper describe filtering by graph frequency instead of by ordered neighborhoods. For station data, $\hat{x}_k$ says how much the PM2.5 field aligns with graph mode $\mathbf{u}_k$.
 
-The role of this transform is analogous to classical Fourier analysis, but the basis is determined by the graph rather than by a regular grid.
+The inverse transform is:
+
+$$
+\mathbf{x}=U\hat{\mathbf{x}}.
+$$
+
+This reconstructs the node-domain signal from graph Fourier coefficients. The role of this transform is analogous to classical Fourier analysis, but the basis is determined by the graph rather than by a regular grid. For PM2.5 forecasting, this means the graph construction determines the frequency geometry used by the spatial layer.
 
 ## Spectral Filtering
 
 A graph signal can be filtered by:
 
-```text
-y = g_θ(L)x = U g_θ(Λ) U^T x
-```
+$$
+\mathbf{y}=g_\theta(L)\mathbf{x}=Ug_\theta(\Lambda)U^T\mathbf{x}.
+$$
 
-This equation says: transform the node signal into graph-frequency space, modify frequency components using the filter `g_θ`, and transform the result back to the nodes. The filter is a function of the Laplacian spectrum, so it is tied to the chosen graph.
+This equation defines convolution-like filtering on a graph by using the Laplacian spectrum. It transforms the node signal $\mathbf{x}$ into graph-frequency space with $U^T$, modifies frequency components using $g_\theta(\Lambda)$, and reconstructs the filtered signal $\mathbf{y}$ with $U$. The filter is tied to the chosen graph because $L$, $U$, and $\Lambda$ all depend on $W$.
 
-For forecasting, this matters because the graph defines which spatial patterns are considered smooth, local, or high-frequency. A distance graph, a correlation graph, and a meteorological graph can induce different notions of graph frequency.
+For forecasting, this matters because the graph defines which spatial patterns are considered smooth, local, or high-frequency. A distance graph, a correlation graph, and a meteorological graph can induce different notions of graph frequency. However, P-GRAPH-001 itself solves the graph-domain convolution definition and efficient localized filtering problem; suitability for spatiotemporal forecasting comes from later models that combine spatial graph convolution with temporal modeling.
 
 ## Why Naive Spectral Filters Are Not Enough
 
 A direct non-parametric spectral filter can be written as:
 
-```text
-g_θ(Λ) = diag(θ)
-```
+$$
+g_\theta(\Lambda)=\operatorname{diag}(\theta).
+$$
 
-This learns one parameter per graph frequency. It is mathematically simple, but it is not a good scalable graph CNN layer.
+Here, $\theta$ contains one learnable parameter per graph frequency. This formula solves the definitional problem of spectral filtering, but it is not a good scalable graph CNN layer. For PM2.5 station graphs, this would make the filter tightly dependent on the eigensystem of one constructed graph.
 
 The problems are:
 
 * It is not localized in the vertex domain, so a node's output may depend globally on many other nodes.
-* It requires `O(n)` learnable parameters for a graph with `n` nodes.
-* It requires expensive multiplication by the graph Fourier basis `U`.
+* It requires $O(n)$ learnable parameters for a graph with $n$ nodes.
+* It requires expensive multiplication by the graph Fourier basis $U$.
 * It depends tightly on a specific graph eigensystem, which makes the filter less operationally interpretable as local aggregation.
 
 For PM2.5 forecasting, this is undesirable because local support should be an explicit assumption: the modeler should know whether a station aggregates from one-hop, two-hop, or broader graph neighborhoods.
@@ -126,19 +134,13 @@ For PM2.5 forecasting, this is undesirable because local support should be an ex
 
 The paper replaces arbitrary spectral filters with polynomial filters of the Laplacian:
 
-```text
-g_θ(L) = Σ_{k=0}^{K-1} θ_k L^k
-```
+$$
+g_\theta(L)=\sum_{k=0}^{K-1}\theta_k L^k.
+$$
 
-The key fact is that powers of the Laplacian only mix information along graph paths up to a bounded length. A polynomial of order `K` produces a filter localized within a `K`-hop neighborhood. If two nodes are farther apart than the filter support, the filter does not directly couple them.
+Here, $\theta_k$ is the learnable coefficient for the $k$-th power of $L$, and $K$ controls the polynomial order. This is the paper's key move from a non-local spectral definition to localized graph filtering. The key fact is that powers of the Laplacian only mix information along graph paths up to a bounded length. A polynomial of order $K$ produces a filter localized within a $K$-hop neighborhood. If two nodes are farther apart than the filter support, the filter does not directly couple them.
 
-This gives `K` a concrete modeling meaning:
-
-```text
-K controls graph-neighborhood support.
-```
-
-In station graphs, `K` should not be treated as a generic hyperparameter only. It is a locality assumption about how far spatial information should propagate through the graph. A larger `K` may capture broader regional structure, but it may also propagate noise or misleading dependencies if the graph edges are poorly specified.
+This gives $K$ a concrete modeling meaning: $K$ controls graph-neighborhood support. In station graphs, $K$ should not be treated as a generic hyperparameter only. It is a locality assumption about how far spatial information should propagate through the graph. A larger $K$ may capture broader regional structure, but it may also propagate noise or misleading dependencies if the graph edges are poorly specified.
 
 ## Chebyshev Approximation
 
@@ -146,51 +148,55 @@ Polynomial filters still need to be computed efficiently. The paper uses Chebysh
 
 First, the Laplacian is rescaled:
 
-```text
-L_tilde = 2L / λ_max - I_n
-```
+$$
+\tilde{L}=\frac{2}{\lambda_{\max}}L-I_n.
+$$
 
-This scaling puts the spectrum into a range suitable for Chebyshev recurrence. The filter is then written as:
+Here, $\lambda_{\max}$ is the largest eigenvalue of $L$, and $\tilde{L}$ is the rescaled Laplacian. This scaling puts the spectrum into a range suitable for Chebyshev recurrence. For PM2.5 station graphs, the scaling choice should be reproducible because it affects the numerical behavior of the graph convolution layer.
 
-```text
-g_θ(L)x = Σ_{k=0}^{K-1} θ_k T_k(L_tilde)x
-```
+The filter is then written as:
 
-where `T_k` is the Chebyshev polynomial of order `k`. The scalar recurrence is:
+$$
+g_\theta(L)\mathbf{x}=\sum_{k=0}^{K-1}\theta_k T_k(\tilde{L})\mathbf{x}.
+$$
 
-```text
-T_0(x) = 1
-T_1(x) = x
-T_k(x) = 2xT_{k-1}(x) - T_{k-2}(x)
-```
+Here, $T_k$ is the Chebyshev polynomial of order $k$. This equation keeps the spectral-filtering interpretation while making the computation possible without explicitly multiplying by $U$. In PM2.5 forecasting, this is what makes sparse station-graph filtering practical.
+
+The scalar recurrence is:
+
+$$
+T_0(z)=1,\quad T_1(z)=z,\quad T_k(z)=2zT_{k-1}(z)-T_{k-2}(z).
+$$
+
+Here, $z$ is a scalar input to the Chebyshev polynomial. The recurrence lets the paper compute higher-order filter terms from two previous terms. This is the algebraic reason the graph filter can be implemented efficiently.
 
 For graph signals, this becomes:
 
-```text
-x_bar_0 = x
-x_bar_1 = L_tilde x
-x_bar_k = 2L_tilde x_bar_{k-1} - x_bar_{k-2}
-```
+$$
+\bar{\mathbf{x}}_0=\mathbf{x},\quad
+\bar{\mathbf{x}}_1=\tilde{L}\mathbf{x},\quad
+\bar{\mathbf{x}}_k=2\tilde{L}\bar{\mathbf{x}}_{k-1}-\bar{\mathbf{x}}_{k-2}.
+$$
 
-The important implementation consequence is that each step only needs sparse matrix-vector multiplication by the scaled Laplacian. No explicit graph Fourier transform is needed during filtering.
+Here, $\bar{\mathbf{x}}_k$ is the $k$-th recursively computed graph-filtered signal. The important implementation consequence is that each step only needs sparse matrix-vector multiplication by the scaled Laplacian. No explicit graph Fourier transform is needed during filtering. For station graphs, this ties runtime to sparse edges rather than dense spectral basis operations.
 
 The resulting complexity is:
 
-```text
-O(K|E|)
-```
+$$
+O(K|E|).
+$$
 
-where `K` is the filter support size and `|E|` is the number of graph edges. This is efficient when the graph is sparse. If the station graph is dense or poorly sparsified, this computational advantage weakens and the locality assumption becomes harder to interpret.
+Here, $K$ is the filter support size and $|E|$ is the number of graph edges. This is efficient when the graph is sparse. If the station graph is dense or poorly sparsified, this computational advantage weakens and the locality assumption becomes harder to interpret.
 
 ## Multi-Feature Graph Convolution
 
 In a neural network layer, graph convolution is applied across feature channels. Each output feature map is formed by summing filtered versions of all input feature maps:
 
-```text
-y_j = Σ_i g_{θ_{i,j}}(L)x_i
-```
+$$
+\mathbf{y}_j=\sum_i g_{\theta_{i,j}}(L)\mathbf{x}_i.
+$$
 
-Here, each input-output channel pair has its own Chebyshev coefficients. This is the graph analogue of using multiple convolutional kernels across channels in a standard CNN.
+Here, $\mathbf{x}_i$ is the $i$-th input feature signal, $\mathbf{y}_j$ is the $j$-th output feature signal, and each input-output channel pair has its own Chebyshev coefficients $\theta_{i,j}$. This is the graph analogue of using multiple convolutional kernels across channels in a standard CNN. For PM2.5 forecasting, this can mix station-level features spatially, but temporal forecasting suitability comes only when later architectures combine this spatial operation with temporal modules.
 
 For STGCN-style models, this is the spatial part of the architecture: graph convolution mixes information across stations, while temporal convolution handles time dynamics. Understanding this separation is important because a forecasting failure may come from temporal modeling, graph construction, or their interaction.
 
@@ -221,7 +227,7 @@ The method depends on several assumptions that must be made explicit before usin
 * The graph is sparse enough for Chebyshev filtering to be efficient.
 * Nearby nodes on the graph tend to have statistically meaningful relationships.
 * The same type of local filter is useful across different graph neighborhoods.
-* The chosen filter support `K` matches the relevant spatial dependency range.
+* The chosen filter support $K$ matches the relevant spatial dependency range.
 * The graph is fixed or stable enough for the learned filters to remain meaningful.
 
 These assumptions are not guaranteed for air-quality stations. Edges based on distance, historical correlation, meteorology, wind direction, or domain knowledge can encode different causal and statistical stories.
@@ -253,7 +259,7 @@ Concrete implications:
 * STGCN should be understood as building on polynomial graph filtering, not as an opaque baseline.
 * The graph builder must be treated as a research decision.
 * The Laplacian type and normalization must be documented.
-* The Chebyshev order `K` should be reported as a locality assumption.
+* The Chebyshev order $K$ should be reported as a locality assumption.
 * Graph quality should be stress-tested because failures may come from graph mismatch.
 * PM2.5 graph choices should be compared using reliability metrics, not only MAE or RMSE.
 
@@ -289,12 +295,7 @@ In images, a convolution kernel can slide over a regular grid. The local neighbo
 
 The spectral approach avoids defining convolution by spatial translation. It uses the graph Laplacian to define graph Fourier modes. These modes provide a frequency-like coordinate system determined by the graph structure itself. A graph signal can then be filtered by transforming it into graph frequency space, modifying its frequency components, and transforming it back.
 
-The important intuition is:
-
-```text
-The graph Laplacian defines what smoothness means on a graph.
-Spectral filtering modifies graph signals according to graph-defined frequencies.
-```
+The important intuition is that the graph Laplacian defines what smoothness means on a graph, and spectral filtering modifies graph signals according to graph-defined frequencies.
 
 Low-frequency graph signals vary smoothly across connected nodes. High-frequency graph signals vary sharply across connected nodes. For PM2.5 forecasting, this means that the meaning of "smooth" or "rough" depends entirely on how the station graph is constructed.
 
@@ -304,13 +305,13 @@ A naive spectral filter is not enough because it can be non-local and computatio
 
 A polynomial filter such as:
 
-```text
-g_θ(L) = Σ_{k=0}^{K-1} θ_k L^k
-```
+$$
+g_\theta(L)=\sum_{k=0}^{K-1}\theta_k L^k
+$$
 
-has a clear graph interpretation. Since `L` propagates information across graph edges, powers of `L` correspond to repeated neighborhood propagation. A K-order polynomial filter is therefore localized within a K-hop neighborhood.
+has a clear graph interpretation. Here, $L$ is the graph Laplacian, $\theta_k$ is the coefficient for the $k$-th power of $L$, and $K$ controls the filter order. Since $L$ propagates information across graph edges, powers of $L$ correspond to repeated neighborhood propagation. A $K$-order polynomial filter is therefore localized within a $K$-hop neighborhood.
 
-This makes `K` more than a numerical hyperparameter. In a station graph, `K` encodes an assumption about how far spatial information should propagate through the graph. If `K` is too small, the model may miss long-range pollution transport. If `K` is too large, the model may mix unrelated stations and amplify noisy or misleading dependencies.
+This makes $K$ more than a numerical hyperparameter. In a station graph, $K$ encodes an assumption about how far spatial information should propagate through the graph. If $K$ is too small, the model may miss long-range pollution transport. If $K$ is too large, the model may mix unrelated stations and amplify noisy or misleading dependencies.
 
 ### 4. Why Chebyshev Approximation Matters
 
@@ -318,11 +319,11 @@ The Chebyshev approximation makes the spectral idea computationally usable. Dire
 
 Chebyshev recurrence allows the filter to be computed through repeated sparse matrix-vector multiplications. This avoids explicitly computing the Fourier basis and gives complexity approximately proportional to:
 
-```text
+$$
 O(K|E|)
-```
+$$
 
-where `K` is the filter support size and `|E|` is the number of graph edges.
+where $K$ is the filter support size and $|E|$ is the number of graph edges.
 
 This is why the paper is important for later STGCN-style models: it turns spectral graph convolution from an elegant definition into a practical layer.
 
@@ -343,13 +344,270 @@ The most important research implication is that graph construction should be tre
 
 A later stress test should compare different graph constructions, such as distance-based graphs, correlation-based graphs, meteorology-informed graphs, and perturbed or randomized graphs. The comparison should not only report prediction error, but also uncertainty calibration, coverage degradation, and downstream decision cost.
 
+## Mathematical Deepening: Laplacian, Smoothness, and Graph Fourier Space
+
+### 1. What the Paper Is Doing in Section 2.1
+
+Section 2.1 of the paper moves from the difficulty of defining convolution in the vertex domain to a spectral graph formulation. The key chain is:
+
+1. Define a graph signal on an undirected weighted graph.
+2. Define the graph Laplacian.
+3. Use the eigendecomposition of the Laplacian to define graph Fourier modes.
+4. Define spectral filtering in the graph Fourier domain.
+5. Replace naive spectral filters with localized polynomial filters and Chebyshev recurrence.
+
+This means that the Laplacian is not introduced as a decorative matrix. It is the mathematical object that defines what variation, smoothness, and frequency mean on the graph. P-GRAPH-001 solves the graph-domain convolution definition and efficient localized filtering problem. Its relevance to spatiotemporal forecasting comes later, when spatial graph convolution is combined with temporal modeling.
+
+### 2. Graph Weights, Units, and the Meaning of $W$
+
+The paper defines a weighted graph $G=(V,E,W)$, where $W$ is the weighted adjacency matrix. For my project, it is important not to confuse raw physical distance with edge weight.
+
+A raw distance $d_{ij}$ is usually not used directly as $W_{ij}$. Instead, distance or other relational evidence is transformed into a similarity or influence weight, for example:
+
+$$
+W_{ij}=\exp\left(-\frac{d_{ij}^2}{\sigma^2}\right).
+$$
+
+This formula turns the physical distance $d_{ij}$ into a connection strength $W_{ij}$, with $\sigma$ controlling the distance scale. In the paper's logic, $W$ defines the graph on which the Laplacian is built. For a PM2.5 station graph, this means $W_{ij}$ should be interpreted as a normalized or dimensionless connection strength, not necessarily as a physical distance.
+
+This matters because the graph Laplacian mixes edge weights with node signals:
+
+$$
+(L\mathbf{x})_i=\sum_j W_{ij}(x_i-x_j).
+$$
+
+Here, $\mathbf{x}$ is the graph signal, $x_i-x_j$ is the signal difference between stations $i$ and $j$, and $W_{ij}$ controls how much that difference matters under the chosen graph structure. In PM2.5 forecasting, graph construction is already a modeling assumption. A distance-based graph, a correlation-based graph, a meteorology-informed graph, and a wind-informed graph define different meanings of local inconsistency.
+
+### 3. Why $L\mathbf{x}$ Measures Local Inconsistency
+
+For the unnormalized graph Laplacian,
+
+$$
+L=D-W,
+$$
+
+where
+
+$$
+D_{ii}=\sum_j W_{ij}.
+$$
+
+The first formula defines the Laplacian as degree minus adjacency, and the second formula defines the weighted degree of node $i$. In Section 2.1, these objects define the graph difference operator used to build spectral graph convolution. For PM2.5 station graphs, $D_{ii}$ measures the total graph connection strength around station $i$.
+
+For a graph signal $\mathbf{x}\in\mathbb{R}^n$, the $i$-th component of $L\mathbf{x}$ is:
+
+$$
+(L\mathbf{x})_i=(D\mathbf{x})_i-(W\mathbf{x})_i.
+$$
+
+This equation separates the self-weighted degree term from the neighbor aggregation term. In the paper's logic, it shows why $L$ acts like a graph difference operator. For PM2.5, it compares station $i$ with the weighted station neighborhood defined by $W$.
+
+Since
+
+$$
+(D\mathbf{x})_i=D_{ii}x_i=\left(\sum_j W_{ij}\right)x_i
+$$
+
+and
+
+$$
+(W\mathbf{x})_i=\sum_j W_{ij}x_j,
+$$
+
+we obtain:
+
+$$
+(L\mathbf{x})_i
+=\sum_j W_{ij}x_i-\sum_j W_{ij}x_j
+=\sum_j W_{ij}(x_i-x_j).
+$$
+
+This derivation shows that $L\mathbf{x}$ measures the weighted disagreement between each node and its neighbors. If node $i$ has a similar value to its strongly connected neighbors, then $(L\mathbf{x})_i$ is small. If node $i$ differs sharply from strongly connected neighbors, then $(L\mathbf{x})_i$ is large. In PM2.5 forecasting, $L\mathbf{x}$ measures how inconsistent a station's pollution value is relative to its graph-defined neighborhood, but this interpretation is valid only if the graph-defined neighborhood is meaningful.
+
+### 4. Why $\mathbf{x}^T L \mathbf{x}$ Measures Graph Smoothness
+
+The quadratic form of the unnormalized Laplacian is:
+
+$$
+\mathbf{x}^T L \mathbf{x}
+=\frac{1}{2}\sum_{i,j}W_{ij}(x_i-x_j)^2.
+$$
+
+This formula turns local edge disagreements into one global graph roughness score. In the paper's logic, it explains why the Laplacian eigenvalues can be interpreted as graph frequencies: high-energy patterns vary strongly across edges. For PM2.5, the quantity is large when strongly connected stations have sharply different pollution values.
+
+This quantity is not ordinary statistical variance. Variance compares values to a global mean. Graph smoothness compares values across connected nodes.
+
+| Concept | What It Compares | Meaning |
+| ------- | ---------------- | ------- |
+| Variance | $x_i$ against the global mean | Global dispersion |
+| Graph smoothness energy | $x_i$ against graph neighbors $x_j$ | Local disagreement under graph structure |
+
+The square has three roles:
+
+1. It prevents positive and negative differences from canceling.
+2. It penalizes large local disagreements more strongly.
+3. It creates an energy function that measures how rough the signal is on the graph.
+
+Thus, a signal is graph-smooth when strongly connected nodes have similar values. A signal is graph-rough when strongly connected nodes have sharply different values. For PM2.5, smoothness is not simply low variance. A pollution field may vary globally across regions but still be locally smooth if neighboring stations change gradually. Conversely, a local spike at one station may create high graph energy even if the global variance is not large.
+
+### 5. What the Eigenspace of $L$ Means
+
+Because the graph Laplacian is symmetric positive semidefinite, it can be decomposed as:
+
+$$
+L=U\Lambda U^T.
+$$
+
+Here, $U$ is the eigenvector matrix and $\Lambda$ is the diagonal eigenvalue matrix. This is the spectral foundation used by the paper to define graph Fourier analysis. For PM2.5 station graphs, changing $W$ changes $L$, and therefore changes the eigenspace used by graph filtering.
+
+The eigenvector matrix is:
+
+$$
+U=[\mathbf{u}_1,\mathbf{u}_2,\ldots,\mathbf{u}_n],
+$$
+
+and the eigenvalue matrix is:
+
+$$
+\Lambda=\operatorname{diag}(\lambda_1,\lambda_2,\ldots,\lambda_n).
+$$
+
+Here, each $\mathbf{u}_k$ is an orthonormal eigenvector and each $\lambda_k$ is its corresponding eigenvalue. These symbols define the graph Fourier coordinate system in Section 2.1. In PM2.5 forecasting, each $\mathbf{u}_k$ is a station-level variation pattern induced by the chosen graph.
+
+Each eigenvector satisfies:
+
+$$
+L\mathbf{u}_k=\lambda_k\mathbf{u}_k.
+$$
+
+This means that $\mathbf{u}_k$ is a stable mode of variation under the graph Laplacian: applying the graph difference operator $L$ does not change the direction of the mode; it only scales it by $\lambda_k$. The eigenspace of $L$ can therefore be understood as the space of graph-induced variation patterns. Each eigenvector is an independent pattern of variation over the nodes, and the eigenvalue measures how rough or smooth that pattern is with respect to the graph.
+
+For a unit-norm eigenvector $\mathbf{u}_k$:
+
+$$
+\mathbf{u}_k^T L \mathbf{u}_k=\lambda_k.
+$$
+
+This formula connects eigenvalues directly to graph smoothness energy. Small $\lambda_k$ means the eigenvector varies smoothly across graph edges, while large $\lambda_k$ means the eigenvector changes sharply across graph edges. This is the key reason why the paper treats Laplacian eigenvectors as graph Fourier modes.
+
+### 6. Why $U$ Defines the Graph Fourier Basis
+
+In classical Fourier analysis, sine and cosine functions form frequency bases because they are eigenfunctions of standard differential operators on regular domains. On graphs, there is no regular coordinate axis and no natural translation operator. The graph Laplacian replaces the differential operator.
+
+Therefore, the eigenvectors of $L$ play the role of Fourier modes:
+
+| Classical Signal | Graph Signal |
+| ---------------- | ------------ |
+| Sine and cosine basis | Laplacian eigenvectors |
+| Frequency | Laplacian eigenvalue |
+| Smooth low-frequency waves | Eigenvectors with small eigenvalues |
+| Oscillatory high-frequency waves | Eigenvectors with large eigenvalues |
+
+A graph signal $\mathbf{x}$ can be represented in the Laplacian eigenbasis:
+
+$$
+\hat{\mathbf{x}}=U^T\mathbf{x}.
+$$
+
+Here, $\hat{\mathbf{x}}$ is the graph Fourier transform of $\mathbf{x}$, and $\hat{x}_k$ is the coefficient of $\mathbf{x}$ along graph mode $\mathbf{u}_k$. In the paper's logic, this representation makes spectral filtering possible. For PM2.5, it describes which graph-induced spatial variation modes compose a station-level pollution field.
+
+The inverse transform is:
+
+$$
+\mathbf{x}=U\hat{\mathbf{x}}.
+$$
+
+This formula reconstructs the node-domain signal from its graph Fourier coefficients. Thus, node space answers "where is the signal value located?", while graph spectral space answers "which graph variation modes compose this signal?"
+
+### 7. Smoothness Decomposition in the Graph Fourier Basis
+
+If
+
+$$
+\mathbf{x}=U\hat{\mathbf{x}},
+$$
+
+then:
+
+$$
+\mathbf{x}^T L \mathbf{x}
+=(U\hat{\mathbf{x}})^T L (U\hat{\mathbf{x}}).
+$$
+
+These equations substitute the graph Fourier expansion into the Laplacian quadratic form. In the paper's logic, this is the bridge between graph smoothness and graph frequency. For PM2.5, it explains how roughness of a station pollution field can be decomposed by graph-induced spatial modes.
+
+Using
+
+$$
+L=U\Lambda U^T
+$$
+
+and
+
+$$
+U^TU=I,
+$$
+
+we get:
+
+$$
+\mathbf{x}^T L \mathbf{x}
+=\hat{\mathbf{x}}^T\Lambda\hat{\mathbf{x}}
+=\sum_{k=1}^n \lambda_k \hat{x}_k^2.
+$$
+
+This equation is the rigorous bridge between smoothness and frequency. It says that the total graph roughness of $\mathbf{x}$ is the weighted sum of its spectral coefficients, where the weights are Laplacian eigenvalues. Energy placed on large $\lambda_k$ modes contributes more to roughness. Energy placed on small $\lambda_k$ modes contributes less. This is why the eigenvalues can be interpreted as graph frequencies.
+
+### 8. My Current Interpretation
+
+My current understanding is:
+
+The eigenspace of $L$ is a graph-structured constraint space. It partitions possible graph signals according to how violently or smoothly they vary under the graph-defined neighborhood relation. In this sense, frequency on a graph is not an external time or spatial frequency. It is a measure of variation induced by the graph itself.
+
+Equivalently:
+
+$$
+L=U\Lambda U^T
+$$
+
+means that the graph Laplacian can be diagonalized in a coordinate system whose axes are graph variation modes. In that coordinate system, $L$ does not mix modes; it only scales each mode by its graph frequency $\lambda_k$. For PM2.5, this means graph frequency is not temporal frequency; it is a property of the station graph and the signal variation across that graph.
+
+This is why spectral filtering can be defined as:
+
+$$
+\mathbf{y}=Ug_\theta(\Lambda)U^T\mathbf{x}.
+$$
+
+The operation first decomposes $\mathbf{x}$ into graph frequency components, modifies each component according to a learnable frequency response $g_\theta$, and then reconstructs the filtered signal in node space. In the paper's logic, this defines graph-domain filtering before the paper later makes it localized and efficient with polynomial and Chebyshev filters.
+
+### 9. Research Implications for Reliable PM2.5 Forecasting
+
+This interpretation changes how I should think about graph convolution in PM2.5 forecasting.
+
+The graph does not merely connect stations. It defines the frequency geometry of the entire spatial graph model. If the graph is distance-based, then smoothness means nearby stations should have similar pollution values. If the graph is correlation-based, smoothness means historically correlated stations should behave similarly. If the graph is wind-informed, smoothness may encode directional transport or meteorological dependency.
+
+Therefore, graph frequency is graph-dependent.
+
+If the graph is poorly constructed, then:
+
+1. $L\mathbf{x}$ measures disagreement against the wrong neighbors.
+2. $\mathbf{x}^T L\mathbf{x}$ gives a misleading smoothness score.
+3. The eigenvectors $U$ define misleading graph Fourier modes.
+4. Spectral filtering may suppress or amplify the wrong components.
+5. A graph convolution layer may propagate misleading information.
+6. Reliability failures may appear not only in MAE/RMSE, but also in calibration, coverage, and downstream decision cost.
+
+This gives a concrete research direction:
+
+Graph construction should be evaluated as part of reliability analysis. A reliable spatiotemporal forecasting project should compare different graph definitions and test whether graph mismatch changes not only predictive accuracy, but also uncertainty quality and decision reliability.
+
 ## Questions for My Project
 
 1. What should an edge represent in a PM2.5 station graph?
 2. Should the graph be based on distance, historical correlation, meteorology, wind direction, domain knowledge, or a hybrid design?
 3. How sensitive are STGCN predictions to graph construction?
 4. Does graph quality affect uncertainty calibration and empirical coverage under shift?
-5. Does increasing Chebyshev order `K` improve long-horizon forecasts or amplify noisy spatial propagation?
+5. Does increasing Chebyshev order $K$ improve long-horizon forecasts or amplify noisy spatial propagation?
 6. Should graph perturbation be included as a post-MVP reliability stress test?
 7. Can graph mismatch explain downstream decision instability?
 8. Should graph construction be evaluated separately under normal periods, extreme pollution events, and seasonal regimes?
@@ -365,7 +623,7 @@ Before implementing STGCN, I need to specify:
 * sparsification rule,
 * Laplacian type,
 * Laplacian normalization,
-* Chebyshev order `K`,
+* Chebyshev order $K$,
 * maximum eigenvalue handling,
 * sparse matrix representation,
 * graph construction reproducibility,
@@ -373,12 +631,10 @@ Before implementing STGCN, I need to specify:
 
 A minimal Chebyshev graph convolution interface should make the graph assumptions visible:
 
-```text
-input: X, adjacency or Laplacian, K
-output: graph-filtered features
-assumptions: undirected graph, fixed graph, sparse Laplacian
-tests: shape preservation, K-hop locality, deterministic output under fixed graph
-```
+* Input: feature matrix, adjacency or Laplacian, and Chebyshev order $K$.
+* Output: graph-filtered features.
+* Assumptions: undirected graph, fixed graph, and sparse Laplacian.
+* Tests: shape preservation, $K$-hop locality, and deterministic output under a fixed graph.
 
 For the reliability project, implementation tests are not enough. The experimental protocol should later compare at least distance-based, correlation-based, and perturbed graph variants under forecasting error, coverage, sharpness, and decision-cost metrics.
 
@@ -389,9 +645,9 @@ For the reliability project, implementation tests are not enough. The experiment
 3. Why do Laplacian eigenvectors form graph Fourier modes?
 4. What does spectral filtering mean?
 5. Why is a non-parametric spectral filter not localized?
-6. Why does a polynomial in `L` produce `K`-hop locality?
+6. Why does a polynomial in $L$ produce $K$-hop locality?
 7. Why is Chebyshev recurrence computationally efficient?
-8. What does `O(K|E|)` mean?
+8. What does $O(K|E|)$ mean?
 9. Why does graph quality matter?
 10. How does this paper prepare me to understand STGCN?
 
