@@ -545,7 +545,7 @@ $$
 and
 
 $$
-U^TU=I,
+U^TU=I_n,
 $$
 
 we get:
@@ -869,6 +869,260 @@ This means $K$ should not be treated merely as a hyperparameter. It should be an
 * Does graph mismatch change calibration, coverage, or decision cost?
 
 In this sense, polynomial filtering connects the mathematical definition of graph convolution to reliability evaluation.
+
+## Why Polynomial Filters Restore Locality
+
+The previous section explains the failure mode of a non-parametric spectral filter: it is diagonal in the graph-frequency basis, but after transforming back to the node basis it usually becomes a dense node-space operator. This is the main reason that spectral filtering alone is not yet CNN-like. It solves the lack of translation on graphs by defining convolution through the Laplacian eigenbasis, but a fully free frequency response still does not guarantee local support.
+
+Polynomial filters are the paper's key restriction on the spectral filter class. This restriction is not a weakness of the method. It is the inductive bias that makes the filter local, parameter-efficient, and computationally closer to a CNN kernel.
+
+### 1. From Non-Parametric Frequency Weights to Structured Frequency Response
+
+The non-parametric spectral filter is:
+
+$$
+g_\theta(\Lambda)=\mathrm{diag}(\theta),
+$$
+
+where
+
+$$
+\theta\in\mathbb{R}^n.
+$$
+
+This gives every graph frequency an independent parameter. In the graph Fourier domain, this is maximally flexible:
+
+$$
+\hat{y}_k=\theta_k\hat{x}_k.
+$$
+
+However, this flexibility has two costs. First, it has no node-space locality guarantee, because $U\mathrm{diag}(\theta)U^T$ is generally dense. Second, its learning complexity grows with the number of nodes, because it requires $O(n)$ learnable parameters.
+
+The polynomial filter instead uses:
+
+$$
+g_\theta(\Lambda)=\sum_{k=0}^{K-1}\theta_k\Lambda^k,
+$$
+
+where
+
+$$
+\theta\in\mathbb{R}^K.
+$$
+
+This means the filter no longer learns one free parameter per graph frequency. Instead, it learns a structured frequency response curve:
+
+$$
+g_\theta(\lambda)=\sum_{k=0}^{K-1}\theta_k\lambda^k.
+$$
+
+For each eigenvalue $\lambda_i$, the response is:
+
+$$
+g_\theta(\lambda_i)=\theta_0+\theta_1\lambda_i+\theta_2\lambda_i^2+\cdots+\theta_{K-1}\lambda_i^{K-1}.
+$$
+
+The first benefit is parameter efficiency: the number of learnable parameters becomes $O(K)$ instead of $O(n)$. The second benefit is locality, because this polynomial frequency response can be rewritten as a polynomial of the Laplacian in node space.
+
+### 2. Why a Polynomial in $\Lambda$ Becomes a Polynomial in $L$
+
+The key reason polynomial filters restore locality is that the graph Laplacian is diagonalized by the graph Fourier basis:
+
+$$
+L=U\Lambda U^T.
+$$
+
+Since the eigenvectors are orthonormal,
+
+$$
+U^TU=I_n.
+$$
+
+For $m=2$:
+
+$$
+\begin{aligned}
+L^2
+&=(U\Lambda U^T)(U\Lambda U^T) \\
+&=U\Lambda(U^TU)\Lambda U^T \\
+&=U\Lambda I_n\Lambda U^T \\
+&=U\Lambda^2U^T.
+\end{aligned}
+$$
+
+By the same argument, for any positive integer $m$:
+
+$$
+L^m=U\Lambda^mU^T.
+$$
+
+Therefore:
+
+$$
+\begin{aligned}
+\sum_{k=0}^{K-1}\theta_kL^k
+&=\sum_{k=0}^{K-1}\theta_kU\Lambda^kU^T \\
+&=U
+\left(
+\sum_{k=0}^{K-1}\theta_k\Lambda^k
+\right)
+U^T.
+\end{aligned}
+$$
+
+The expression inside the parentheses is exactly $g_\theta(\Lambda)$. Thus:
+
+$$
+g_\theta(L)
+=Ug_\theta(\Lambda)U^T
+=\sum_{k=0}^{K-1}\theta_kL^k.
+$$
+
+This is the central mathematical bridge in Section 2.1. A polynomial frequency response can be implemented directly as a polynomial of the graph Laplacian in node space. The model no longer needs to apply a dense arbitrary spectral operator at every layer.
+
+### 3. Why $L^k$ Gives Graph-Hop Locality
+
+For the unnormalized Laplacian,
+
+$$
+L=D-W.
+$$
+
+For $i\neq j$,
+
+$$
+L_{ij}=-W_{ij}.
+$$
+
+Thus, if nodes $i$ and $j$ are not connected by an edge, then $W_{ij}=0$ and $L_{ij}=0$. This means that the off-diagonal nonzero entries of $L$ only connect one-hop neighbors. The diagonal entries preserve self-information through the degree term. The normalized Laplacian changes the weights, but it has the same basic off-diagonal sparsity pattern when the graph is undirected and degrees are nonzero.
+
+For $L^2$:
+
+$$
+(L^2)_{ij}=\sum_m L_{im}L_{mj}.
+$$
+
+This term can be nonzero only if there exists an intermediate node $m$ such that:
+
+$$
+L_{im}\neq 0
+$$
+
+and
+
+$$
+L_{mj}\neq 0.
+$$
+
+This corresponds to a path:
+
+$$
+i\rightarrow m\rightarrow j.
+$$
+
+Therefore, $L^2$ can transmit information across two-hop neighborhoods. More generally, $(L^k)_{ij}$ can be nonzero only if there exists a path from $i$ to $j$ of length at most $k$. Therefore:
+
+$$
+d_G(i,j)>k
+\quad\Rightarrow\quad
+(L^k)_{ij}=0.
+$$
+
+This is why a polynomial in $L$ has graph-local support. If the highest power of $L$ is $K-1$, then the filter can only directly combine information within a bounded graph-hop neighborhood. The exact off-by-one convention depends on whether $K$ denotes the number of coefficients, the polynomial order, or the support size. The essential point is that the maximum power of $L$ determines the maximum graph-hop range.
+
+### 4. What $L^0$ Means
+
+By convention:
+
+$$
+L^0=I_n.
+$$
+
+This is the identity matrix, not a new graph operator. Therefore:
+
+$$
+L^0\mathbf{x}=I_n\mathbf{x}=\mathbf{x}.
+$$
+
+In the polynomial filter,
+
+$$
+g_\theta(L)
+=\theta_0I_n+\theta_1L+\theta_2L^2+\cdots+\theta_{K-1}L^{K-1},
+$$
+
+the first term $\theta_0I_n$ corresponds to zero-hop self-information. It preserves each node's own signal before mixing information through graph neighborhoods.
+
+| Term | Interpretation |
+| ---- | -------------- |
+| $\theta_0I_n\mathbf{x}$ | 0-hop self-information |
+| $\theta_1L\mathbf{x}$ | 1-hop graph difference / neighbor relation |
+| $\theta_2L^2\mathbf{x}$ | Up to 2-hop propagation |
+| $\theta_kL^k\mathbf{x}$ | Up to $k$-hop propagation |
+
+This makes the polynomial filter similar in spirit to a CNN kernel: the support size controls how far the filter can look. The difference is that a graph kernel's support is measured by graph hops, not by regular-grid pixel offsets.
+
+### 5. Why $U^T$ Is the Inverse of $U$ in This Paper
+
+In the paper, $U^T$ is the transpose of $U$. It is also the inverse of $U$ because $U$ is an orthogonal matrix.
+
+This is not true for arbitrary matrices. It holds here because the paper considers undirected connected graphs, whose graph Laplacian is real symmetric and positive semidefinite. By the spectral theorem, $L$ has a complete set of orthonormal eigenvectors.
+
+Therefore:
+
+$$
+U^TU=I_n
+$$
+
+and
+
+$$
+UU^T=I_n.
+$$
+
+Hence:
+
+$$
+U^{-1}=U^T.
+$$
+
+This is why the graph Fourier transform is written as:
+
+$$
+\hat{\mathbf{x}}=U^T\mathbf{x},
+$$
+
+and the inverse graph Fourier transform is:
+
+$$
+\mathbf{x}=U\hat{\mathbf{x}}.
+$$
+
+If the graph were directed, or if the relevant graph operator were not symmetric, this simple orthogonal Fourier basis would generally not apply.
+
+### 6. Research Interpretation for PM2.5 Forecasting
+
+For PM2.5 station graphs, polynomial filtering changes the meaning of the model.
+
+A non-parametric spectral filter may mix information from distant stations in an uncontrolled way after projecting back to node space. This can create global dependencies that are difficult to justify physically or meteorologically.
+
+A polynomial filter makes the dependency range explicit:
+
+$$
+K=\text{the assumed graph-hop range of useful spatial dependency}.
+$$
+
+Thus, $K$ is not merely a tuning parameter. It is a modeling assumption about how far useful pollution-related information can propagate on the chosen graph.
+
+This creates concrete research questions:
+
+* Does a small $K$ miss long-range pollution transport?
+* Does a large $K$ mix unrelated stations and amplify graph mismatch?
+* Does the best $K$ change under temporal distribution shift?
+* Does graph construction change which $K$ is reliable?
+* Do different $K$ values affect calibration, coverage, or decision cost differently?
+
+The key reliability implication is that graph locality is only meaningful if the graph itself is meaningful. A $K$-localized filter on a wrong graph is still localized, but localized around the wrong neighbors.
 
 ## Questions for My Project
 
