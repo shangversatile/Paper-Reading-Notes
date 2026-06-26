@@ -1124,6 +1124,267 @@ This creates concrete research questions:
 
 The key reliability implication is that graph locality is only meaningful if the graph itself is meaningful. A $K$-localized filter on a wrong graph is still localized, but localized around the wrong neighbors.
 
+## Chebyshev Recurrence: Efficient Computation of Localized Polynomial Filters
+
+### 1. The Main Clarification
+
+Chebyshev recurrence should not be understood as a simple abbreviation of $L^k$.
+
+The correct relationship is:
+
+$$T_k(\tilde L)\neq L^k.$$
+
+Instead:
+
+$$T_k(\tilde L)\in \mathrm{span}\{I_n,L,L^2,\ldots,L^k\}.$$
+
+That is, $T_k(\tilde L)$ is a degree-$k$ polynomial in $L$. It is not the same as the monomial $L^k$, but it does not leave the polynomial-filtering framework. It remains a graph-local polynomial operator.
+
+The recurrence changes the polynomial basis and the computational path. It does not change the basic idea that localized graph filtering is implemented through finite-degree polynomials of the Laplacian.
+
+### 2. From Monomial Basis to Chebyshev Basis
+
+A standard polynomial filter can be written using the monomial basis:
+
+$$g_\theta(L)\mathbf{x}=\sum_{k=0}^{K-1}\theta_kL^k\mathbf{x}.$$
+
+This uses the basis:
+
+$$I_n,L,L^2,L^3,\ldots.$$
+
+The Chebyshev filter instead uses:
+
+$$g_\theta(L)\mathbf{x}=\sum_{k=0}^{K-1}\theta_kT_k(\tilde L)\mathbf{x}.$$
+
+This uses the basis:
+
+$$T_0(\tilde L),T_1(\tilde L),T_2(\tilde L),\ldots.$$
+
+Both are polynomial bases. The difference is that Chebyshev polynomials provide a numerically stable and recursively computable basis for approximating spectral filter responses.
+
+The first few Chebyshev polynomials are:
+
+$$T_0(z)=1.$$
+
+$$T_1(z)=z.$$
+
+$$T_2(z)=2z^2-1.$$
+
+$$T_3(z)=4z^3-3z.$$
+
+After substituting the scaled Laplacian, the constant polynomial becomes the identity matrix:
+
+$$T_0(\tilde L)=I_n.$$
+
+The next terms are:
+
+$$T_1(\tilde L)=\tilde L.$$
+
+$$T_2(\tilde L)=2\tilde L^2-I_n.$$
+
+$$T_3(\tilde L)=4\tilde L^3-3\tilde L.$$
+
+These terms are still polynomials of the graph Laplacian after substituting the scaled Laplacian. The basis changes from monomials to Chebyshev polynomials, but the filter remains a finite polynomial graph filter.
+
+### 3. Why the Laplacian Is Scaled
+
+The scaled Laplacian is:
+
+$$\tilde L=\frac{2L}{\lambda_{\max}}-I_n.$$
+
+The corresponding scaled eigenvalue matrix is:
+
+$$\tilde \Lambda=\frac{2\Lambda}{\lambda_{\max}}-I_n.$$
+
+The purpose is to map the original Laplacian eigenvalues from:
+
+$$[0,\lambda_{\max}]$$
+
+to:
+
+$$[-1,1].$$
+
+This matters because Chebyshev polynomials are stable and orthogonal on the interval $[-1,1]$. Without this scaling, high-order polynomial terms may become numerically unstable when eigenvalues are large.
+
+Thus, scaling is not a change of graph structure. It is a numerical normalization that makes Chebyshev polynomial approximation stable. For PM2.5 station graphs, this means the handling of $\lambda_{\max}$ should be documented because it affects the numerical behavior of the graph convolution layer.
+
+### 4. Expanding the Relationship to $L^k$
+
+Let:
+
+$$a=\frac{2}{\lambda_{\max}}.$$
+
+Then:
+
+$$\tilde L=aL-I_n.$$
+
+For the first order:
+
+$$T_1(\tilde L)=\tilde L=aL-I_n.$$
+
+Therefore:
+
+$$T_1(\tilde L)\mathbf{x}=aL\mathbf{x}-\mathbf{x}.$$
+
+This mixes 0-hop self-information and 1-hop graph-difference information.
+
+For the second order:
+
+$$T_2(\tilde L)=2\tilde L^2-I_n.$$
+
+Since:
+
+$$\tilde L^2=(aL-I_n)^2=a^2L^2-2aL+I_n,$$
+
+we have:
+
+$$T_2(\tilde L)=2a^2L^2-4aL+I_n.$$
+
+Therefore:
+
+$$T_2(\tilde L)\mathbf{x}=2a^2L^2\mathbf{x}-4aL\mathbf{x}+\mathbf{x}.$$
+
+This shows that $T_2(\tilde L)\mathbf{x}$ is not simply $L^2\mathbf{x}$. It is a stable combination of 0-hop, 1-hop, and 2-hop graph information.
+
+More generally, $T_k(\tilde L)\mathbf{x}$ is a combination of:
+
+$$I_n\mathbf{x},L\mathbf{x},L^2\mathbf{x},\ldots,L^k\mathbf{x}.$$
+
+Therefore, it can contain information up to $k$ graph hops, but not beyond $k$ hops.
+
+### 5. What the Recurrence Actually Simplifies
+
+The recurrence relation is:
+
+$$T_k(z)=2zT_{k-1}(z)-T_{k-2}(z),$$
+
+with:
+
+$$T_0(z)=1,\qquad T_1(z)=z.$$
+
+Substituting $z=\tilde L$ gives:
+
+$$T_k(\tilde L)=2\tilde LT_{k-1}(\tilde L)-T_{k-2}(\tilde L).$$
+
+Instead of constructing the matrix $T_k(\tilde L)$, the paper defines:
+
+$$\bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}.$$
+
+Then:
+
+$$\bar{\mathbf{x}}_0=\mathbf{x}.$$
+
+$$\bar{\mathbf{x}}_1=\tilde L\mathbf{x}.$$
+
+For $k\ge 2$:
+
+$$\bar{\mathbf{x}}_k=2\tilde L\bar{\mathbf{x}}_{k-1}-\bar{\mathbf{x}}_{k-2}.$$
+
+This is the key computational simplification.
+
+The model does not need to explicitly construct:
+
+$$L^2,L^3,\ldots,L^k.$$
+
+It also does not need to explicitly construct:
+
+$$T_k(\tilde L).$$
+
+It only needs to recursively compute the vectors:
+
+$$\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_1,\ldots,\bar{\mathbf{x}}_{K-1}.$$
+
+Each recursive step requires one multiplication of the sparse matrix $\tilde L$ with a vector.
+
+### 6. Why This Is Fast
+
+The direct spectral filtering form is:
+
+$$\mathbf{y}=Ug_\theta(\Lambda)U^T\mathbf{x}.$$
+
+This requires multiplication by the dense graph Fourier basis $U$, which costs $O(n^2)$ and requires storing or computing the eigenbasis.
+
+Chebyshev recurrence avoids this during filtering. More precisely, it avoids:
+
+* explicit Fourier basis multiplication by $U$ and $U^T$;
+* explicit eigendecomposition during the filtering operation;
+* explicit construction of dense matrix powers such as $L^2,L^3,\ldots,L^k$;
+* explicit construction of the matrix $T_k(\tilde L)$.
+
+The final filtering operation is:
+
+$$\mathbf{y}=\sum_{k=0}^{K-1}\theta_k\bar{\mathbf{x}}_k.$$
+
+Equivalently:
+
+$$\mathbf{y}=[\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_1,\ldots,\bar{\mathbf{x}}_{K-1}]\theta.$$
+
+Since each $\bar{\mathbf{x}}_k$ is computed by one sparse Laplacian-vector multiplication, each step costs $O(|E|)$ on a sparse graph. Across $K$ terms, the paper's localized filtering cost is:
+
+$$O(K|E|).$$
+
+The final weighted sum over the $K$ vectors costs $O(Kn)$, which is compatible with the same sparse-graph scaling when $|E|$ is proportional to graph size. This is the computational meaning of fast localized spectral filtering.
+
+### 7. Why Locality Is Preserved
+
+Chebyshev recurrence preserves graph-hop locality because $T_k(\tilde L)$ is still a degree-$k$ polynomial in $L$.
+
+Since $L^k$ cannot propagate information beyond $k$ graph hops, any polynomial involving only powers up to $L^k$ also cannot introduce dependencies beyond $k$ hops.
+
+Therefore, $T_k(\tilde L)\mathbf{x}$ may mix 0-hop through $k$-hop information, but it cannot directly depend on nodes farther than $k$ hops.
+
+The recurrence is a fast way to compute these graph-local polynomial features, not a mechanism that introduces global mixing.
+
+### 8. Intuition for PM2.5 Forecasting
+
+For a PM2.5 station graph, let $\mathbf{x}_t$ be the PM2.5 signal at time $t$.
+
+Then:
+
+$$\bar{\mathbf{x}}_0=\mathbf{x}_t$$
+
+is the original station-level signal.
+
+The first recursive term is:
+
+$$\bar{\mathbf{x}}_1=\tilde L\mathbf{x}_t$$
+
+which contains one-hop local contrast or local graph-difference information.
+
+The second recursive term is:
+
+$$\bar{\mathbf{x}}_2=T_2(\tilde L)\mathbf{x}_t$$
+
+which contains a stable combination of 0-hop, 1-hop, and 2-hop graph information.
+
+More generally:
+
+$$\bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}_t$$
+
+contains graph-structured information up to $k$ hops.
+
+The learned coefficients $\theta_k$ determine how these different graph-local patterns are combined into a spatial feature representation:
+
+$$\mathbf{h}_t=\sum_{k=0}^{K-1}\theta_k\bar{\mathbf{x}}_k.$$
+
+This provides an efficient local spatial feature extractor. It is not a reliability guarantee. If the graph construction is wrong, Chebyshev recurrence will still efficiently propagate information over the wrong neighborhoods.
+
+### 9. Final Understanding
+
+The most important summary is:
+
+Chebyshev recurrence simplifies the computational implementation, not the mathematical meaning of graph filtering.
+
+It replaces explicit dense Fourier-basis multiplication and explicit high-order matrix construction with recursive sparse Laplacian-vector multiplications.
+
+It is best understood as:
+
+1. Choose a stable polynomial basis.
+2. Scale the Laplacian eigenvalues into $[-1,1]$.
+3. Generate graph-local basis features recursively.
+4. Learn coefficients to combine these basis features.
+5. Preserve $K$-hop locality because the filter remains a finite-degree polynomial in $L$.
+
 ## Questions for My Project
 
 1. What should an edge represent in a PM2.5 station graph?
