@@ -1385,6 +1385,295 @@ It is best understood as:
 4. Learn coefficients to combine these basis features.
 5. Preserve $K$-hop locality because the filter remains a finite-degree polynomial in $L$.
 
+## Additional Clarifications on Chebyshev Filtering
+
+The previous sections establish the main logic of Section 2.1: direct spectral filtering defines graph convolution, polynomial filtering restores locality, and Chebyshev recurrence makes localized polynomial filtering efficient and stable. The following clarifications answer four further questions about the choice of $K$, the interpretability tradeoff between bases, the actual computational saving, and the meaning of the recurrence coefficients.
+
+### 1. How Should the Hyperparameter $K$ Be Chosen?
+
+In this paper, $K$ controls the polynomial order and therefore the graph-filter support size. Under the paper's notation, the Chebyshev filter uses the terms $k=0,\ldots,K-1$, so the highest explicit polynomial degree is $K-1$. The essential modeling meaning is that $K$ controls the maximum graph-hop range that the filter can directly use, up to this notation convention.
+
+$K$ is not learned by gradient descent as a model parameter. It is a model-design hyperparameter. The learned quantities are the filter coefficients such as $\theta_k$; $K$ determines how many such basis terms are available and how far the local graph propagation can reach.
+
+Increasing $K$ lets the filter use information from a larger graph-hop neighborhood. It also increases parameter count and computation approximately linearly, because the layer must compute and combine more Chebyshev basis features:
+
+$$
+\mathbf{y}=\sum_{k=0}^{K-1}\theta_k\bar{\mathbf{x}}_k.
+$$
+
+A small $K$ makes the filter more local and computationally cheaper, but it may miss useful long-range spatial dependency. A large $K$ allows broader spatial mixing, but it may also mix unrelated nodes and amplify graph mismatch.
+
+For PM2.5 forecasting, $K$ should be selected through a combination of:
+
+* validation error;
+* calibration and coverage behavior;
+* robustness under temporal shift, missingness, and noise;
+* downstream decision cost;
+* graph construction sensitivity;
+* domain knowledge about pollution transport and station connectivity.
+
+Thus, $K$ should not be treated as a purely mechanical tuning parameter. It represents an assumption about the maximum graph-hop range of useful spatial dependency. A useful research protocol is to evaluate several values of $K$ under the same graph, and then repeat the comparison under different graph constructions. If the best $K$ changes dramatically under temporal shift, missingness, noise, or graph perturbation, this may indicate that the learned locality is not robust.
+
+### 2. Interpretability Tradeoff: Monomial Basis vs Chebyshev Basis
+
+A monomial polynomial filter has the form:
+
+$$
+g_\theta(L)\mathbf{x}
+=
+\theta_0I_n\mathbf{x}
++
+\theta_1L\mathbf{x}
++
+\theta_2L^2\mathbf{x}
++
+\cdots.
+$$
+
+This basis has a relatively direct node-space interpretation:
+
+* $\theta_0$ weights self-information;
+* $\theta_1$ weights information produced by one application of the graph Laplacian;
+* $\theta_2$ weights information produced by two applications of the graph Laplacian;
+* $\theta_k$ weights information contained in $L^k\mathbf{x}$.
+
+Even in the monomial basis, however, $L^k\mathbf{x}$ should not be interpreted as pure $k$-hop information. Because the Laplacian contains diagonal self terms, powers of $L$ mix self-information and lower-hop information.
+
+For example, if the normalized Laplacian is written as:
+
+$$
+L=I_n-S,
+$$
+
+where $S=D^{-1/2}WD^{-1/2}$, then:
+
+$$
+L^2=(I_n-S)^2=I_n-2S+S^2.
+$$
+
+The term $I_n\mathbf{x}$ is 0-hop self-information, $S\mathbf{x}$ is one-hop normalized neighbor mixing, and $S^2\mathbf{x}$ contains information up to two hops. Thus, $L^2\mathbf{x}$ is not pure 2-hop information. The more precise statement is that $L^k\mathbf{x}$ contains information up to $k$ hops.
+
+The Chebyshev filter uses:
+
+$$
+g_\theta(L)\mathbf{x}
+=
+\sum_{k=0}^{K-1}\theta_kT_k(\tilde L)\mathbf{x}.
+$$
+
+Here, $\theta_k$ is no longer directly the weight of the $k$-th monomial term $L^k\mathbf{x}$. Instead, it is the coefficient of the $k$-th Chebyshev basis function in the learned spectral filter response.
+
+For example:
+
+$$
+T_2(\tilde L)=2\tilde L^2-I_n.
+$$
+
+Since $\tilde L=aL-I_n$ with $a=2/\lambda_{\max}$:
+
+$$
+\tilde L^2=(aL-I_n)^2=a^2L^2-2aL+I_n.
+$$
+
+Therefore:
+
+$$
+T_2(\tilde L)=2a^2L^2-4aL+I_n.
+$$
+
+So $T_2(\tilde L)\mathbf{x}$ already mixes:
+
+$$
+I_n\mathbf{x},\quad L\mathbf{x},\quad L^2\mathbf{x}.
+$$
+
+Therefore, Chebyshev coefficients are less directly interpretable as hop-specific weights. The correct interpretation is:
+
+* $\theta_k$ is a coordinate of the spectral filter response in the Chebyshev polynomial basis;
+* $\bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}$ is a Chebyshev-filtered graph signal;
+* $\bar{\mathbf{x}}_k$ contains information up to $k$ graph hops, but it is not pure $k$-hop information.
+
+Thus, Chebyshev filtering trades some hop-level coefficient interpretability for numerical stability and efficient recurrence.
+
+### 3. What Computation Does Chebyshev Recurrence Actually Simplify?
+
+Chebyshev recurrence simplifies the computational path in two ways.
+
+First, it avoids explicit multiplication by the graph Fourier basis. The direct spectral filtering form is:
+
+$$
+\mathbf{y}=Ug_\theta(\Lambda)U^T\mathbf{x}.
+$$
+
+This requires the dense eigenvector matrix $U$. Multiplication by $U$ or $U^T$ is generally expensive, and computing or storing the eigendecomposition is also costly.
+
+By using Chebyshev polynomials, the filter can be written directly in the node domain:
+
+$$
+\mathbf{y}
+=
+\sum_{k=0}^{K-1}
+\theta_kT_k(\tilde L)\mathbf{x}.
+$$
+
+This avoids explicit graph Fourier transform and inverse graph Fourier transform during filtering.
+
+Second, it avoids explicit construction of high-order matrices such as:
+
+$$
+L^2,\ L^3,\ldots,L^k
+$$
+
+or:
+
+$$
+T_k(\tilde L).
+$$
+
+Instead, it recursively computes the vectors:
+
+$$
+\bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}.
+$$
+
+The recurrence is:
+
+$$
+\bar{\mathbf{x}}_0=\mathbf{x},
+$$
+
+$$
+\bar{\mathbf{x}}_1=\tilde L\mathbf{x},
+$$
+
+and for $k\ge 2$:
+
+$$
+\bar{\mathbf{x}}_k
+=
+2\tilde L\bar{\mathbf{x}}_{k-1}
+-
+\bar{\mathbf{x}}_{k-2}.
+$$
+
+Each step only requires a sparse matrix-vector multiplication with $\tilde L$.
+
+Therefore, the main simplification is not simply a space-for-speed tradeoff. The recurrence reduces both computational and storage burden by avoiding dense Fourier-basis operations and explicit high-order matrix construction. The total recurrence cost is:
+
+$$
+O(K|E|),
+$$
+
+because each recurrence step uses the sparse graph structure. The final weighted combination over the $K$ vectors costs $O(Kn)$.
+
+### 4. Why Does the Recurrence Have This Form?
+
+The Chebyshev recurrence is not arbitrary. It comes from the definition of Chebyshev polynomials:
+
+$$
+T_k(\cos\alpha)=\cos(k\alpha).
+$$
+
+The trigonometric product-to-sum identity gives:
+
+$$
+2\cos\alpha\cos((k-1)\alpha)
+=
+\cos(k\alpha)+\cos((k-2)\alpha).
+$$
+
+Rearranging:
+
+$$
+\cos(k\alpha)
+=
+2\cos\alpha\cos((k-1)\alpha)
+-
+\cos((k-2)\alpha).
+$$
+
+Now set:
+
+$$
+z=\cos\alpha.
+$$
+
+Using the defining relationship again:
+
+$$
+T_k(z)=\cos(k\alpha),
+$$
+
+$$
+T_{k-1}(z)=\cos((k-1)\alpha),
+$$
+
+and:
+
+$$
+T_{k-2}(z)=\cos((k-2)\alpha).
+$$
+
+Substituting these into the trigonometric identity gives:
+
+$$
+T_k(z)
+=
+2zT_{k-1}(z)-T_{k-2}(z).
+$$
+
+After replacing $z$ by $\tilde L$, the same recurrence becomes a recurrence over graph-filtered signals:
+
+$$
+\bar{\mathbf{x}}_k
+=
+2\tilde L\bar{\mathbf{x}}_{k-1}
+-
+\bar{\mathbf{x}}_{k-2}.
+$$
+
+The constants $2$ and $-1$ in the recurrence are not learned graph weights and not hop-specific coefficients. They are fixed coefficients inherited from the Chebyshev polynomial basis. The learnable coefficients are $\theta_k$ in the filter expansion.
+
+In the frequency domain, the filter response is:
+
+$$
+g_\theta(\tilde \lambda)
+=
+\sum_{k=0}^{K-1}\theta_kT_k(\tilde \lambda).
+$$
+
+Thus, $\theta_k$ measures how much the $k$-th Chebyshev basis function contributes to the learned frequency response. It is a coordinate of the filter response function in the Chebyshev polynomial basis, not a coordinate of the input signal itself and not a pure $k$-hop weight.
+
+In the node domain, the corresponding basis feature is:
+
+$$
+\bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}.
+$$
+
+The final filtered signal is:
+
+$$
+\mathbf{y}
+=
+\sum_{k=0}^{K-1}
+\theta_k\bar{\mathbf{x}}_k.
+$$
+
+Therefore, the model first generates Chebyshev-basis graph-local features, then learns how to combine them.
+
+### 5. Final Refined Understanding
+
+Chebyshev filtering should be understood as follows:
+
+1. $K$ controls the maximum graph-hop support, subject to the paper's indexing convention, and should be selected by validation error, calibration and coverage behavior, robustness under shift, decision cost, graph construction sensitivity, and domain knowledge.
+2. Moving from monomial basis to Chebyshev basis reduces direct hop-level interpretability of individual coefficients.
+3. The benefit is that the Chebyshev basis gives a stable and recursively computable approximation of the spectral filter response.
+4. The recurrence avoids explicit multiplication by $U$, explicit eigendecomposition during filtering, explicit construction of $L^k$, and explicit construction of $T_k(\tilde L)$.
+5. $\theta_k$ is a Chebyshev-basis coefficient of the filter response, not a pure $k$-hop weight.
+6. $\bar{\mathbf{x}}_k$ is a graph-local Chebyshev-filtered feature containing information up to $k$ hops.
+7. For PM2.5 forecasting, Chebyshev filtering is an efficient local spatial feature extraction mechanism, not a reliability guarantee.
+8. If the station graph is wrong, the recurrence still propagates information efficiently, but it propagates the wrong local information.
+
 ## Questions for My Project
 
 1. What should an edge represent in a PM2.5 station graph?
