@@ -173,9 +173,7 @@ Here, $z$ is a scalar input to the Chebyshev polynomial. The recurrence lets the
 For graph signals, this becomes:
 
 $$
-\bar{\mathbf{x}}_0=\mathbf{x},\quad
-\bar{\mathbf{x}}_1=\tilde{L}\mathbf{x},\quad
-\bar{\mathbf{x}}_k=2\tilde{L}\bar{\mathbf{x}}_{k-1}-\bar{\mathbf{x}}_{k-2}.
+\bar{\mathbf{x}}_0=\mathbf{x},\quad \bar{\mathbf{x}}_1=\tilde{L}\mathbf{x},\quad \bar{\mathbf{x}}_k=2\tilde{L}\bar{\mathbf{x}}_{k-1}-\bar{\mathbf{x}}_{k-2}.
 $$
 
 Here, $\bar{\mathbf{x}}_k$ is the $k$-th recursively computed graph-filtered signal. The important implementation consequence is that each step only needs sparse matrix-vector multiplication by the scaled Laplacian. No explicit graph Fourier transform is needed during filtering. For station graphs, this ties runtime to sparse edges rather than dense spectral basis operations.
@@ -227,23 +225,13 @@ $$
 The input feature matrix for sample $s$ can therefore be written as:
 
 $$
-\mathbf{X}_s=
-\left[
-\mathbf{x}_{s,1},
-\mathbf{x}_{s,2},
-\ldots,
-\mathbf{x}_{s,F_{\mathrm{in}}}
-\right]
-\in\mathbb{R}^{n\times F_{\mathrm{in}}}.
+\mathbf{X}_s= \left[ \mathbf{x}_{s,1}, \mathbf{x}_{s,2}, \ldots, \mathbf{x}_{s,F_{\mathrm{in}}} \right] \in\mathbb{R}^{n\times F_{\mathrm{in}}}.
 $$
 
 Formula (5) in the paper defines the $j$-th output feature map as:
 
 $$
-\mathbf{y}_{s,j}
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-g_{\theta_{i,j}}(L)\mathbf{x}_{s,i},
+\mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} g_{\theta_{i,j}}(L)\mathbf{x}_{s,i},
 $$
 
 where:
@@ -259,20 +247,13 @@ Thus, each output channel is obtained by filtering all input channels and summin
 Using Chebyshev filters, each input-output channel filter is expanded as:
 
 $$
-g_{\theta_{i,j}}(L)\mathbf{x}_{s,i}
-=
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+g_{\theta_{i,j}}(L)\mathbf{x}_{s,i} = \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
 $$
 
 Substituting this expansion into formula (5) gives:
 
 $$
-\mathbf{y}_{s,j}
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+\mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
 $$
 
 The indices have the following meanings:
@@ -304,12 +285,7 @@ The summation is a linear algebra operation, not a probabilistic assumption. It 
 The component-level expression makes this clearer. For node $v$:
 
 $$
-y_{s,j}(v)
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}
-\left[T_k(\tilde L)\mathbf{x}_{s,i}\right]_v.
+y_{s,j}(v) = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k} \left[T_k(\tilde L)\mathbf{x}_{s,i}\right]_v.
 $$
 
 This is a sum of filtered feature values at the same output node coordinate $v$. The layer learns how much each input channel and each Chebyshev order should contribute through the parameters $\theta_{i,j,k}$.
@@ -359,12 +335,7 @@ $$
 Multiplying by $\theta_{i,j,k}$ keeps the result in $\mathbb{R}^n$, and summing vectors over $i$ and $k$ still gives a vector in $\mathbb{R}^n$. Therefore:
 
 $$
-\mathbf{y}_{s,j}
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}
-\in\mathbb{R}^n.
+\mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i} \in\mathbb{R}^n.
 $$
 
 The full layer maps:
@@ -414,11 +385,7 @@ For STGCN-style models, this is the spatial part of the architecture: graph conv
 Formula (5) mixes multiple input feature channels through the same graph Laplacian:
 
 $$
-\mathbf{y}_{s,j}
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+\mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
 $$
 
 This means that every input variable is filtered through the same graph geometry before being combined into output channels.
@@ -444,18 +411,13 @@ does not only use the original value at each node. It creates graph-local featur
 A simple perturbation view makes the risk explicit. If input channel $i$ is corrupted by a noise vector $\mathbf{e}_{s,i}$, then the filtered term changes by:
 
 $$
-T_k(\tilde L)(\mathbf{x}_{s,i}+\mathbf{e}_{s,i})
--
-T_k(\tilde L)\mathbf{x}_{s,i}
-=
-T_k(\tilde L)\mathbf{e}_{s,i}.
+T_k(\tilde L)(\mathbf{x}_{s,i}+\mathbf{e}_{s,i}) - T_k(\tilde L)\mathbf{x}_{s,i} = T_k(\tilde L)\mathbf{e}_{s,i}.
 $$
 
 After channel mixing, the contribution of this corruption to output channel $j$ is:
 
 $$
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}T_k(\tilde L)\mathbf{e}_{s,i}.
+\sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{e}_{s,i}.
 $$
 
 Thus, graph convolution may transform local data-quality problems into spatially distributed representation errors. Missingness is especially risky if it is encoded as a value or imputed without an explicit missingness indicator, because the graph filter may treat the imputed pattern as a real graph signal.
@@ -465,11 +427,7 @@ Thus, graph convolution may transform local data-quality problems into spatially
 The output channel is a sum over both input variables and Chebyshev orders:
 
 $$
-\mathbf{y}_{s,j}
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+\mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
 $$
 
 If the final prediction fails, it may be unclear whether the cause is:
@@ -513,11 +471,7 @@ are learned hidden representation coordinates. They should not be directly inter
 A single output channel may mix multiple variables and multiple Chebyshev orders:
 
 $$
-\mathbf{y}_{s,j}
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+\mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
 $$
 
 Therefore, output channels require additional analysis before assigning physical meaning. Useful tools include:
@@ -626,11 +580,7 @@ $$
 Then the multi-feature graph convolution becomes:
 
 $$
-\mathbf{y}_{s,j}
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-\sum_{k=0}^{K-1}
-\theta_{i,j,k}T_k(\tilde L_i)\mathbf{x}_{s,i}.
+\mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L_i)\mathbf{x}_{s,i}.
 $$
 
 Here, each input variable is filtered through its own graph geometry before being combined into the output channel.
@@ -658,22 +608,13 @@ These may represent distance-based, correlation-based, meteorology-informed, lea
 A mixture version can be written as:
 
 $$
-\mathbf{y}_{s,j}
-=
-\sum_{i=1}^{F_{\mathrm{in}}}
-\sum_{r=1}^{R}
-\sum_{k=0}^{K-1}
-\alpha_{i,r}
-\theta_{i,j,r,k}
-T_k(\tilde L^{(r)})\mathbf{x}_{s,i}.
+\mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{r=1}^{R} \sum_{k=0}^{K-1} \alpha_{i,r} \theta_{i,j,r,k} T_k(\tilde L^{(r)})\mathbf{x}_{s,i}.
 $$
 
 The coefficient $\alpha_{i,r}$ represents how strongly input channel $i$ uses graph relation $r$. A constrained mixture can require:
 
 $$
-\alpha_{i,r}\ge 0,
-\qquad
-\sum_{r=1}^{R}\alpha_{i,r}=1.
+\alpha_{i,r}\ge 0, \qquad \sum_{r=1}^{R}\alpha_{i,r}=1.
 $$
 
 This approach allows each variable to combine several graph geometries rather than being forced to use one shared graph.
@@ -681,9 +622,7 @@ This approach allows each variable to combine several graph geometries rather th
 A dynamic version may use:
 
 $$
-\alpha_{i,1,t},\ldots,\alpha_{i,R,t}
-=
-\mathrm{softmax}(f_\phi(\mathbf{z}_t)),
+\alpha_{i,1,t},\ldots,\alpha_{i,R,t} = \mathrm{softmax}(f_\phi(\mathbf{z}_t)),
 $$
 
 so that graph-relation weights change with time, meteorological conditions, or regime.
@@ -1022,9 +961,7 @@ $$
 we obtain:
 
 $$
-(L\mathbf{x})_i
-=\sum_j W_{ij}x_i-\sum_j W_{ij}x_j
-=\sum_j W_{ij}(x_i-x_j).
+(L\mathbf{x})_i =\sum_j W_{ij}x_i-\sum_j W_{ij}x_j =\sum_j W_{ij}(x_i-x_j).
 $$
 
 This derivation shows that $L\mathbf{x}$ measures the weighted disagreement between each node and its neighbors. If node $i$ has a similar value to its strongly connected neighbors, then $(L\mathbf{x})_i$ is small. If node $i$ differs sharply from strongly connected neighbors, then $(L\mathbf{x})_i$ is large. In PM2.5 forecasting, $L\mathbf{x}$ measures how inconsistent a station's pollution value is relative to its graph-defined neighborhood, but this interpretation is valid only if the graph-defined neighborhood is meaningful.
@@ -1034,8 +971,7 @@ This derivation shows that $L\mathbf{x}$ measures the weighted disagreement betw
 The quadratic form of the unnormalized Laplacian is:
 
 $$
-\mathbf{x}^T L \mathbf{x}
-=\frac{1}{2}\sum_{i,j}W_{ij}(x_i-x_j)^2.
+\mathbf{x}^T L \mathbf{x} =\frac{1}{2}\sum_{i,j}W_{ij}(x_i-x_j)^2.
 $$
 
 This formula turns local edge disagreements into one global graph roughness score. In the paper's logic, it explains why the Laplacian eigenvalues can be interpreted as graph frequencies: high-energy patterns vary strongly across edges. For PM2.5, the quantity is large when strongly connected stations have sharply different pollution values.
@@ -1135,8 +1071,7 @@ $$
 then:
 
 $$
-\mathbf{x}^T L \mathbf{x}
-=(U\hat{\mathbf{x}})^T L (U\hat{\mathbf{x}}).
+\mathbf{x}^T L \mathbf{x} =(U\hat{\mathbf{x}})^T L (U\hat{\mathbf{x}}).
 $$
 
 These equations substitute the graph Fourier expansion into the Laplacian quadratic form. In the paper's logic, this is the bridge between graph smoothness and graph frequency. For PM2.5, it explains how roughness of a station pollution field can be decomposed by graph-induced spatial modes.
@@ -1156,9 +1091,7 @@ $$
 we get:
 
 $$
-\mathbf{x}^T L \mathbf{x}
-=\hat{\mathbf{x}}^T\Lambda\hat{\mathbf{x}}
-=\sum_{k=1}^n \lambda_k \hat{x}_k^2.
+\mathbf{x}^T L \mathbf{x} =\hat{\mathbf{x}}^T\Lambda\hat{\mathbf{x}} =\sum_{k=1}^n \lambda_k \hat{x}_k^2.
 $$
 
 This equation is the rigorous bridge between smoothness and frequency. It says that the total graph roughness of $\mathbf{x}$ is the weighted sum of its spectral coefficients, where the weights are Laplacian eigenvalues. Energy placed on large $\lambda_k$ modes contributes more to roughness. Energy placed on small $\lambda_k$ modes contributes less. This is why the eigenvalues can be interpreted as graph frequencies.
@@ -1377,13 +1310,7 @@ $$
 Therefore, the output at node $i$ is:
 
 $$
-y_i=\sum_{j=1}^{n}A_{ij}x_j
-=\sum_{j=1}^{n}
-\left(
-\sum_{k=1}^{n}
-\theta_k U_{ik}U_{jk}
-\right)
-x_j.
+y_i=\sum_{j=1}^{n}A_{ij}x_j =\sum_{j=1}^{n} \left( \sum_{k=1}^{n} \theta_k U_{ik}U_{jk} \right) x_j.
 $$
 
 This shows that node $i$ may depend on many or even all nodes $j$ in the graph.
@@ -1399,11 +1326,7 @@ Frequency-domain diagonal does not mean node-domain local.
 A CNN-like graph filter should satisfy a locality condition. If the graph distance between node $i$ and node $j$ is greater than $K$, then node $j$ should not directly influence the output at node $i$:
 
 $$
-A_{ij}=0
-\quad
-\mathrm{when}
-\quad
-d_G(i,j)>K.
+A_{ij}=0 \quad \mathrm{when} \quad d_G(i,j)>K.
 $$
 
 A non-parametric spectral filter does not guarantee this condition.
@@ -1427,8 +1350,7 @@ If the filter is localized, this output should be nonzero only around node $i$.
 But for the non-parametric spectral filter,
 
 $$
-g_\theta(L)\boldsymbol{\delta}_i
-=U\mathrm{diag}(\theta)U^T\boldsymbol{\delta}_i,
+g_\theta(L)\boldsymbol{\delta}_i =U\mathrm{diag}(\theta)U^T\boldsymbol{\delta}_i,
 $$
 
 the response may be spread across many nodes. This means that a signal placed at one node can influence distant nodes after filtering.
@@ -1578,9 +1500,7 @@ $$
 The expression inside the parentheses is exactly $g_\theta(\Lambda)$. Thus:
 
 $$
-g_\theta(L)
-=Ug_\theta(\Lambda)U^T
-=\sum_{k=0}^{K-1}\theta_kL^k.
+g_\theta(L) =Ug_\theta(\Lambda)U^T =\sum_{k=0}^{K-1}\theta_kL^k.
 $$
 
 This is the central mathematical bridge in Section 2.1. A polynomial frequency response can be implemented directly as a polynomial of the graph Laplacian in node space. The model no longer needs to apply a dense arbitrary spectral operator at every layer.
@@ -1628,9 +1548,7 @@ $$
 Therefore, $L^2$ can transmit information across two-hop neighborhoods. More generally, $(L^k)_{ij}$ can be nonzero only if there exists a path from $i$ to $j$ of length at most $k$. Therefore:
 
 $$
-d_G(i,j)>k
-\quad\Rightarrow\quad
-(L^k)_{ij}=0.
+d_G(i,j)>k \quad\Rightarrow\quad (L^k)_{ij}=0.
 $$
 
 This is why a polynomial in $L$ has graph-local support. If the highest power of $L$ is $K-1$, then the filter can only directly combine information within a bounded graph-hop neighborhood. The exact off-by-one convention depends on whether $K$ denotes the number of coefficients, the polynomial order, or the support size. The essential point is that the maximum power of $L$ determines the maximum graph-hop range.
@@ -1652,8 +1570,7 @@ $$
 In the polynomial filter,
 
 $$
-g_\theta(L)
-=\theta_0I_n+\theta_1L+\theta_2L^2+\cdots+\theta_{K-1}L^{K-1},
+g_\theta(L) =\theta_0I_n+\theta_1L+\theta_2L^2+\cdots+\theta_{K-1}L^{K-1},
 $$
 
 the first term $\theta_0I_n$ corresponds to zero-hop self-information. It preserves each node's own signal before mixing information through graph neighborhoods.
@@ -2116,15 +2033,7 @@ Thus, $K$ should not be treated as a purely mechanical tuning parameter. It repr
 A monomial polynomial filter has the form:
 
 $$
-g_\theta(L)\mathbf{x}
-=
-\theta_0I_n\mathbf{x}
-+
-\theta_1L\mathbf{x}
-+
-\theta_2L^2\mathbf{x}
-+
-\cdots.
+g_\theta(L)\mathbf{x} = \theta_0I_n\mathbf{x} + \theta_1L\mathbf{x} + \theta_2L^2\mathbf{x} + \cdots.
 $$
 
 This basis has a relatively direct node-space interpretation:
@@ -2153,9 +2062,7 @@ The term $I_n\mathbf{x}$ is 0-hop self-information, $S\mathbf{x}$ is one-hop nor
 The Chebyshev filter uses:
 
 $$
-g_\theta(L)\mathbf{x}
-=
-\sum_{k=0}^{K-1}\theta_kT_k(\tilde L)\mathbf{x}.
+g_\theta(L)\mathbf{x} = \sum_{k=0}^{K-1}\theta_kT_k(\tilde L)\mathbf{x}.
 $$
 
 Here, $\theta_k$ is no longer directly the weight of the $k$-th monomial term $L^k\mathbf{x}$. Instead, it is the coefficient of the $k$-th Chebyshev basis function in the learned spectral filter response.
@@ -2207,10 +2114,7 @@ This requires the dense eigenvector matrix $U$. Multiplication by $U$ or $U^T$ i
 By using Chebyshev polynomials, the filter can be written directly in the node domain:
 
 $$
-\mathbf{y}
-=
-\sum_{k=0}^{K-1}
-\theta_kT_k(\tilde L)\mathbf{x}.
+\mathbf{y} = \sum_{k=0}^{K-1} \theta_kT_k(\tilde L)\mathbf{x}.
 $$
 
 This avoids explicit graph Fourier transform and inverse graph Fourier transform during filtering.
@@ -2246,11 +2150,7 @@ $$
 and for $k\ge 2$:
 
 $$
-\bar{\mathbf{x}}_k
-=
-2\tilde L\bar{\mathbf{x}}_{k-1}
--
-\bar{\mathbf{x}}_{k-2}.
+\bar{\mathbf{x}}_k = 2\tilde L\bar{\mathbf{x}}_{k-1} - \bar{\mathbf{x}}_{k-2}.
 $$
 
 Each step only requires a sparse matrix-vector multiplication with $\tilde L$.
@@ -2274,19 +2174,13 @@ $$
 The trigonometric product-to-sum identity gives:
 
 $$
-2\cos\alpha\cos((k-1)\alpha)
-=
-\cos(k\alpha)+\cos((k-2)\alpha).
+2\cos\alpha\cos((k-1)\alpha) = \cos(k\alpha)+\cos((k-2)\alpha).
 $$
 
 Rearranging:
 
 $$
-\cos(k\alpha)
-=
-2\cos\alpha\cos((k-1)\alpha)
--
-\cos((k-2)\alpha).
+\cos(k\alpha) = 2\cos\alpha\cos((k-1)\alpha) - \cos((k-2)\alpha).
 $$
 
 Now set:
@@ -2314,19 +2208,13 @@ $$
 Substituting these into the trigonometric identity gives:
 
 $$
-T_k(z)
-=
-2zT_{k-1}(z)-T_{k-2}(z).
+T_k(z) = 2zT_{k-1}(z)-T_{k-2}(z).
 $$
 
 After replacing $z$ by $\tilde L$, the same recurrence becomes a recurrence over graph-filtered signals:
 
 $$
-\bar{\mathbf{x}}_k
-=
-2\tilde L\bar{\mathbf{x}}_{k-1}
--
-\bar{\mathbf{x}}_{k-2}.
+\bar{\mathbf{x}}_k = 2\tilde L\bar{\mathbf{x}}_{k-1} - \bar{\mathbf{x}}_{k-2}.
 $$
 
 The constants $2$ and $-1$ in the recurrence are not learned graph weights and not hop-specific coefficients. They are fixed coefficients inherited from the Chebyshev polynomial basis. The learnable coefficients are $\theta_k$ in the filter expansion.
@@ -2334,9 +2222,7 @@ The constants $2$ and $-1$ in the recurrence are not learned graph weights and n
 In the frequency domain, the filter response is:
 
 $$
-g_\theta(\tilde \lambda)
-=
-\sum_{k=0}^{K-1}\theta_kT_k(\tilde \lambda).
+g_\theta(\tilde \lambda) = \sum_{k=0}^{K-1}\theta_kT_k(\tilde \lambda).
 $$
 
 Thus, $\theta_k$ measures how much the $k$-th Chebyshev basis function contributes to the learned frequency response. It is a coordinate of the filter response function in the Chebyshev polynomial basis, not a coordinate of the input signal itself and not a pure $k$-hop weight.
@@ -2350,10 +2236,7 @@ $$
 The final filtered signal is:
 
 $$
-\mathbf{y}
-=
-\sum_{k=0}^{K-1}
-\theta_k\bar{\mathbf{x}}_k.
+\mathbf{y} = \sum_{k=0}^{K-1} \theta_k\bar{\mathbf{x}}_k.
 $$
 
 Therefore, the model first generates Chebyshev-basis graph-local features, then learns how to combine them.
