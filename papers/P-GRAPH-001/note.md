@@ -601,6 +601,210 @@ The key research implication is:
 
 Multi-feature graph convolution does not merely propagate PM2.5. It propagates and mixes all input variables under the same graph-defined geometry. Its reliability depends on whether that graph geometry remains valid for the variables, time periods, and shift conditions being modeled.
 
+## Research Extension: Channel-Specific and Dynamic Graph Structures
+
+This section is a research extension motivated by formula (5). It should not be read as a contribution that the original paper already completes. The paper gives the fast localized graph convolution layer; the following discussion asks what reliability questions arise when that layer is used for multi-variable PM2.5 forecasting.
+
+### 1. Shared Node Set Does Not Imply Shared Graph Geometry
+
+In environmental forecasting, different input variables may be observed on the same set of monitoring stations. Therefore, they share the same node set.
+
+However, sharing the same node set does not imply that all variables should share the same graph Laplacian.
+
+PM2.5 concentration, temperature, humidity, wind speed, wind direction, pressure, and other pollutant variables may follow different spatial mechanisms. A graph that is appropriate for PM2.5 transport may not be appropriate for temperature smoothing or wind-driven propagation.
+
+Thus, the shared Laplacian in formula (5) should be interpreted as a modeling assumption, not a mathematical necessity.
+
+### 2. Channel-Specific Graph Laplacians
+
+A direct extension is to assign each input channel its own graph Laplacian:
+
+$$
+L_i.
+$$
+
+Then the multi-feature graph convolution becomes:
+
+$$
+\mathbf{y}_{s,j}
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}T_k(\tilde L_i)\mathbf{x}_{s,i}.
+$$
+
+Here, each input variable is filtered through its own graph geometry before being combined into the output channel.
+
+This is mathematically valid as long as all graph Laplacians are defined over the same node set. Each $L_i$ is still an $n$ by $n$ matrix, so:
+
+$$
+T_k(\tilde L_i)\mathbf{x}_{s,i}\in\mathbb{R}^n.
+$$
+
+Each filtered term remains an $n$-dimensional node signal, so the filtered results can still be summed or concatenated across channels.
+
+The reliability advantage is that graph-channel mismatch may be reduced. The risk is that the model now depends on multiple graph constructions, each of which must be justified and evaluated.
+
+### 3. Multi-Graph Mixture
+
+Instead of assigning one graph per channel, one can define a set of candidate graphs:
+
+$$
+L^{(1)},L^{(2)},\ldots,L^{(R)}.
+$$
+
+These may represent distance-based, correlation-based, meteorology-informed, learned, or dynamic graph structures.
+
+A mixture version can be written as:
+
+$$
+\mathbf{y}_{s,j}
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+\sum_{r=1}^{R}
+\sum_{k=0}^{K-1}
+\alpha_{i,r}
+\theta_{i,j,r,k}
+T_k(\tilde L^{(r)})\mathbf{x}_{s,i}.
+$$
+
+The coefficient $\alpha_{i,r}$ represents how strongly input channel $i$ uses graph relation $r$. A constrained mixture can require:
+
+$$
+\alpha_{i,r}\ge 0,
+\qquad
+\sum_{r=1}^{R}\alpha_{i,r}=1.
+$$
+
+This approach allows each variable to combine several graph geometries rather than being forced to use one shared graph.
+
+A dynamic version may use:
+
+$$
+\alpha_{i,1,t},\ldots,\alpha_{i,R,t}
+=
+\mathrm{softmax}(f_\phi(\mathbf{z}_t)),
+$$
+
+so that graph-relation weights change with time, meteorological conditions, or regime.
+
+### 4. Learned and Dynamic Graphs
+
+A more flexible extension is to learn the graph structure itself.
+
+For each channel, one may define:
+
+$$
+W_i=f_\phi(\text{node features},\text{distance},\text{historical statistics}),
+$$
+
+and then construct:
+
+$$
+L_i=I_n-D_i^{-1/2}W_iD_i^{-1/2}.
+$$
+
+For dynamic propagation, the graph may vary over time:
+
+$$
+W_{i,t}=f_\phi(\text{meteorology}_t,\text{station embeddings},\text{distance}),
+$$
+
+with:
+
+$$
+L_{i,t}=I_n-D_{i,t}^{-1/2}W_{i,t}D_{i,t}^{-1/2}.
+$$
+
+Then filtering can use:
+
+$$
+T_k(\tilde L_{i,t})\mathbf{x}_{t,i}.
+$$
+
+Here, $D_i$ and $D_{i,t}$ are the degree matrices associated with $W_i$ and $W_{i,t}$. This allows the spatial propagation structure to depend on time, variable type, or meteorological regime.
+
+However, learned graphs must be constrained. Otherwise, the model may learn spurious shortcuts rather than physically meaningful propagation structure.
+
+Useful constraints include:
+
+* nonnegative edge weights;
+* sparsity;
+* no self-loops unless explicitly intended;
+* symmetry when using Chebyshev Laplacians;
+* closeness to physical or distance-based priors;
+* temporal smoothness for dynamic graphs;
+* top-$k$ neighbor masks;
+* prevention of future-information leakage.
+
+### 5. Propagated Signals vs Propagation Modifiers
+
+Not all input variables should necessarily be treated as graph signals to be propagated in the same way.
+
+Some variables are propagated signals. For example:
+
+* PM2.5 concentration;
+* other pollutant concentrations;
+* possibly temperature or humidity under some assumptions.
+
+Other variables may be better interpreted as propagation modifiers. For example, wind direction and wind speed may determine how pollution should move between stations. They may be more appropriate as edge-weight generators or dynamic graph conditions rather than ordinary node channels filtered by a fixed $L$.
+
+This distinction is important for PM2.5 forecasting:
+
+* PM2.5 is the target signal being transported or spatially correlated;
+* meteorological variables may modulate the graph structure through which PM2.5 propagates.
+
+Therefore, reliable model design should distinguish between variables that should be filtered as signals and variables that should condition the graph itself.
+
+### 6. Research Question
+
+This extension leads to a concrete research question:
+
+Does using a single shared graph Laplacian for all input variables create unreliable spatial-channel mixing under distribution shift?
+
+More specific questions include:
+
+* Does a shared graph perform well on clean validation but fail under temporal shift?
+* Do channel-specific graphs reduce graph-channel mismatch?
+* Do multi-graph mixtures improve calibration and robustness?
+* Do dynamic graphs better capture wind-driven or season-dependent propagation?
+* Do learned graphs improve reliability, or do they mainly learn training shortcuts?
+* How do different graph designs affect uncertainty coverage and downstream decision cost?
+
+### 7. Suggested Model Ladder
+
+A rigorous research path should avoid jumping directly to the most flexible learned dynamic graph.
+
+A better ladder is:
+
+| Level | Model class | Purpose |
+| ----- | ----------- | ------- |
+| Level 0 | Shared static graph | Baseline; all variables share one $L$ |
+| Level 1 | Channel-specific static graphs | Test whether variables need different graph geometries |
+| Level 2 | Multi-graph mixture | Let channels combine several graph relations |
+| Level 3 | Dynamic or learned graphs | Let graph structure depend on time, context, or meteorology |
+
+The reliability question should be:
+
+Does added graph flexibility improve robustness, calibration, and decision quality, or does it only improve clean prediction error?
+
+### 8. Reliability Evaluation
+
+The following evaluations are necessary:
+
+| Risk | Evaluation |
+| ---- | ---------- |
+| Shared graph may not fit all variables | Compare shared vs channel-specific graphs |
+| Learned graph may overfit | Graph perturbation and shift tests |
+| Dynamic graph may leak future information | Time-safe construction audit |
+| Channel-specific graph may increase complexity | Ablation and parameter sensitivity |
+| Graph flexibility may only improve clean error | Calibration, coverage, and decision cost comparison |
+| Wrong graph may propagate wrong information | Missingness, spike, and graph-mismatch stress tests |
+
+The final research-level interpretation is:
+
+Shared graph convolution assumes that all input variables share the same spatial dependency geometry. This is often unrealistic in environmental forecasting. A reliability-oriented model should distinguish signal-specific graphs, relation-specific graphs, and dynamic condition-dependent graphs, while testing whether increased graph flexibility improves robustness rather than merely clean accuracy.
+
 ## Graph Coarsening and Pooling
 
 The paper also proposes graph coarsening and pooling through multilevel clustering. It uses Graclus coarsening and then rearranges nodes into a balanced binary-tree-like ordering so that pooling can be implemented efficiently.
