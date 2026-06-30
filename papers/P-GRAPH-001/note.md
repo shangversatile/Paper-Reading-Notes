@@ -407,15 +407,186 @@ These meanings are not guaranteed by the architecture, but they provide possible
 
 For STGCN-style models, this is the spatial part of the architecture: graph convolution mixes information across stations, while temporal convolution handles time dynamics. Understanding this separation is important because a forecasting failure may come from temporal modeling, graph construction, or their interaction.
 
-### 7. Reliability Implications
+## Reliability Risks of Multi-Feature Graph Convolution
 
-Formula (5) reveals several reliability concerns.
+### 1. The Main Risk: Shared Graph Geometry Across Variables
 
-First, all input channels are filtered through the same graph Laplacian. If the graph construction is wrong, then every variable is propagated through a potentially wrong neighborhood structure.
+Formula (5) mixes multiple input feature channels through the same graph Laplacian:
 
-Second, different variables may have different spatial mechanisms. A graph that is suitable for PM2.5 concentration may not be equally suitable for wind, humidity, or temperature.
+$$
+\mathbf{y}_{s,j}
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+$$
 
-Third, if some input channels are unstable under distribution shift, missingness, or sensor noise, their graph-filtered representations may contaminate the output channels.
+This means that every input variable is filtered through the same graph geometry before being combined into output channels.
+
+This is a strong assumption. In PM2.5 forecasting, PM2.5 concentration, temperature, humidity, wind speed, wind direction, pressure, and other pollutants may not share the same spatial mechanism.
+
+A graph that is suitable for PM2.5 concentration may not be suitable for wind, humidity, or temperature. Therefore, the layer may propagate different variables through an inappropriate neighborhood structure.
+
+The original reliability implication still applies: if the graph construction is wrong, then every variable is propagated through a potentially wrong neighborhood structure. Multi-feature graph convolution makes this more serious because the wrong graph can affect not just the target pollutant channel, but all environmental covariates that are filtered and then mixed.
+
+### 2. Channel Noise and Missingness Can Be Propagated
+
+If an input channel contains sensor noise, missing values, station outage, or spike anomalies, graph filtering can spread that local corruption to nearby nodes.
+
+The operation:
+
+$$
+T_k(\tilde L)\mathbf{x}_{s,i}
+$$
+
+does not only use the original value at each node. It creates graph-local features up to $k$ hops. Therefore, a corrupted value in one station can affect a neighborhood of stations after filtering.
+
+A simple perturbation view makes the risk explicit. If input channel $i$ is corrupted by a noise vector $\mathbf{e}_{s,i}$, then the filtered term changes by:
+
+$$
+T_k(\tilde L)(\mathbf{x}_{s,i}+\mathbf{e}_{s,i})
+-
+T_k(\tilde L)\mathbf{x}_{s,i}
+=
+T_k(\tilde L)\mathbf{e}_{s,i}.
+$$
+
+After channel mixing, the contribution of this corruption to output channel $j$ is:
+
+$$
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}T_k(\tilde L)\mathbf{e}_{s,i}.
+$$
+
+Thus, graph convolution may transform local data-quality problems into spatially distributed representation errors. Missingness is especially risky if it is encoded as a value or imputed without an explicit missingness indicator, because the graph filter may treat the imputed pattern as a real graph signal.
+
+### 3. Channel Mixing Can Hide the Source of Failure
+
+The output channel is a sum over both input variables and Chebyshev orders:
+
+$$
+\mathbf{y}_{s,j}
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+$$
+
+If the final prediction fails, it may be unclear whether the cause is:
+
+* wrong graph construction;
+* wrong support size $K$;
+* noisy PM2.5 observations;
+* unstable meteorological variables;
+* missingness in one input channel;
+* spurious correlation learned during training;
+* inappropriate use of the same graph for all variables.
+
+Thus, multi-feature graph convolution increases representation capacity, but it also creates coupled failure modes. The learned output channel can look smooth and useful while hiding the fact that one input channel or one graph-filtered order is carrying unstable information.
+
+This is why final prediction error alone is not enough. A model can achieve low validation RMSE while relying on a graph-filtered channel that becomes unreliable under seasonal shift, station outage, or changing wind regimes.
+
+### 4. Spurious Spatial-Channel Shortcuts
+
+The model may learn that a certain graph-filtered variable is predictive in the training distribution.
+
+For example, humidity or wind speed may be strongly correlated with PM2.5 in one season or region. The model may learn large coefficients for these filtered channels:
+
+$$
+\theta_{i,j,k}\quad \text{large for a shifted or unstable channel }i.
+$$
+
+However, under temporal shift, seasonal change, extreme weather, or region transfer, the same relationship may break down.
+
+Therefore, the model may rely on spatial-channel shortcuts that perform well under standard validation but fail under distribution shift. The risk is not only that a raw variable is spuriously correlated with PM2.5. The stronger risk is that a graph-filtered version of that variable becomes spuriously predictive because the graph has spread the shortcut across neighboring stations.
+
+### 5. Output Channels Are Not Physical Mechanisms
+
+The output feature maps:
+
+$$
+\mathbf{y}_{s,1},\ldots,\mathbf{y}_{s,F_{\mathrm{out}}}
+$$
+
+are learned hidden representation coordinates. They should not be directly interpreted as physical mechanisms such as pollution transport, regional background pollution, or local anomaly propagation.
+
+A single output channel may mix multiple variables and multiple Chebyshev orders:
+
+$$
+\mathbf{y}_{s,j}
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+$$
+
+Therefore, output channels require additional analysis before assigning physical meaning. Useful tools include:
+
+* input channel ablation;
+* graph perturbation;
+* support-size sensitivity;
+* feature corruption tests;
+* representation similarity analysis;
+* attribution or gradient-based analysis;
+* shift-conditioned evaluation.
+
+The safe interpretation is that output channels are learned coordinates of hidden node representations. Physical interpretation requires evidence beyond the architecture.
+
+### 6. Critical Questions and Research Answers
+
+#### Question 1: Should all variables use the same graph $L$?
+
+Not necessarily. Different variables may have different spatial mechanisms.
+
+A reliable PM2.5 forecasting study should compare different graph constructions, such as distance-based graphs, correlation-based graphs, meteorology-informed graphs, dynamic graphs, or variable-specific graphs.
+
+The key question is not only which graph gives the lowest error, but which graph remains stable under shift and corruption.
+
+#### Question 2: Does channel mixing model physical interactions sufficiently?
+
+Not fully. A standard graph convolutional layer performs linear channel mixing before nonlinear activation.
+
+This does not directly model complex multiplicative or conditional interactions, such as wind direction modulating pollution transport.
+
+More expressive mechanisms may require nonlinear stacking, temporal modules, attention, gating, dynamic graphs, or explicitly constructed interaction features.
+
+#### Question 3: Is a larger $K$ always better?
+
+No. A larger $K$ allows longer graph-hop propagation, but it can also mix unrelated stations, amplify graph mismatch, and propagate corrupted channels farther.
+
+Therefore, $K$ should be evaluated not only by prediction error, but also by robustness, calibration, coverage, and downstream decision cost.
+
+#### Question 4: Can graph convolution propagate missingness or sensor anomalies?
+
+Yes. A noisy or missing value in one input channel may affect graph-filtered representations within the $K$-hop neighborhood.
+
+This motivates missingness-aware evaluation, channel-specific corruption tests, and robust graph filtering protocols.
+
+#### Question 5: Are output channels interpretable?
+
+Not directly. They are learned representation coordinates, not independent physical factors.
+
+Interpretability requires empirical validation through ablation, perturbation, representation analysis, and comparison across graph constructions and shift conditions.
+
+#### Question 6: Can a good validation score hide a graph-channel failure?
+
+Yes. Standard validation can reward a shortcut if the validation split shares the same seasonal, spatial, or sensor conditions as training.
+
+A stronger evaluation should test temporal shift, station holdout, corrupted channels, alternative graphs, and forecast-to-decision outcomes. Otherwise, a model may look accurate while its graph-filtered hidden representation is brittle.
+
+### 7. PM2.5 Reliability Protocol Implications
+
+Formula (5) motivates the following reliability experiments:
+
+| Risk | Possible Experiment |
+| ---- | ------------------- |
+| Same graph may not fit all variables | Compare distance, correlation, meteorology-informed, dynamic, and variable-specific graphs |
+| Channel shortcut learning | Input-channel ablation and channel corruption |
+| Noise propagation | Sensor spike, bias, and missingness stress tests |
+| Over-large support size | $K$-sensitivity under clean and shifted conditions |
+| Hidden representation instability | Representation similarity across shifts |
+| Clean error hides decision failure | Forecast-to-decision evaluation |
+| Static graph misses dynamic transport | Static graph vs dynamic graph comparison |
 
 Therefore, reliable spatiotemporal forecasting should not only evaluate final prediction error. It should also examine:
 
@@ -428,7 +599,7 @@ Therefore, reliable spatiotemporal forecasting should not only evaluate final pr
 
 The key research implication is:
 
-A graph convolutional layer does not merely propagate PM2.5. It propagates and mixes all input variables under the same graph-defined geometry. The reliability of this operation depends on whether that graph geometry is valid for the variables and conditions being modeled.
+Multi-feature graph convolution does not merely propagate PM2.5. It propagates and mixes all input variables under the same graph-defined geometry. Its reliability depends on whether that graph geometry remains valid for the variables, time periods, and shift conditions being modeled.
 
 ## Graph Coarsening and Pooling
 
