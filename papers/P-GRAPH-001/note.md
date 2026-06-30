@@ -188,17 +188,247 @@ $$
 
 Here, $K$ is the filter support size and $|E|$ is the number of graph edges. This is efficient when the graph is sparse. If the station graph is dense or poorly sparsified, this computational advantage weakens and the locality assumption becomes harder to interpret.
 
-## Multi-Feature Graph Convolution
+## Multi-Feature Graph Convolutional Layer
 
-In a neural network layer, graph convolution is applied across feature channels. Each output feature map is formed by summing filtered versions of all input feature maps:
+### 1. From One Graph Signal to Multiple Feature Maps
+
+The previous filtering discussion considered a single graph signal:
 
 $$
-\mathbf{y}_j=\sum_i g_{\theta_{i,j}}(L)\mathbf{x}_i.
+\mathbf{y}=g_\theta(L)\mathbf{x},
 $$
 
-Here, $\mathbf{x}_i$ is the $i$-th input feature signal, $\mathbf{y}_j$ is the $j$-th output feature signal, and each input-output channel pair has its own Chebyshev coefficients $\theta_{i,j}$. This is the graph analogue of using multiple convolutional kernels across channels in a standard CNN. For PM2.5 forecasting, this can mix station-level features spatially, but temporal forecasting suitability comes only when later architectures combine this spatial operation with temporal modules.
+where:
+
+$$
+\mathbf{x}\in\mathbb{R}^n
+$$
+
+and:
+
+$$
+\mathbf{y}\in\mathbb{R}^n.
+$$
+
+This means one input feature value per node is transformed into one output feature value per node. The node set is unchanged; only the value attached to each node is filtered.
+
+A neural network layer usually has multiple input feature maps and multiple output feature maps. For sample $s$, let:
+
+$$
+\mathbf{x}_{s,i}\in\mathbb{R}^n
+$$
+
+be the $i$-th input feature map, where:
+
+$$
+i=1,\ldots,F_{\mathrm{in}}.
+$$
+
+The input feature matrix for sample $s$ can therefore be written as:
+
+$$
+\mathbf{X}_s=
+\left[
+\mathbf{x}_{s,1},
+\mathbf{x}_{s,2},
+\ldots,
+\mathbf{x}_{s,F_{\mathrm{in}}}
+\right]
+\in\mathbb{R}^{n\times F_{\mathrm{in}}}.
+$$
+
+Formula (5) in the paper defines the $j$-th output feature map as:
+
+$$
+\mathbf{y}_{s,j}
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+g_{\theta_{i,j}}(L)\mathbf{x}_{s,i},
+$$
+
+where:
+
+$$
+j=1,\ldots,F_{\mathrm{out}}.
+$$
+
+Thus, each output channel is obtained by filtering all input channels and summing their contributions.
+
+### 2. Chebyshev Expansion of Formula (5)
+
+Using Chebyshev filters, each input-output channel filter is expanded as:
+
+$$
+g_{\theta_{i,j}}(L)\mathbf{x}_{s,i}
+=
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+$$
+
+Substituting this expansion into formula (5) gives:
+
+$$
+\mathbf{y}_{s,j}
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
+$$
+
+The indices have the following meanings:
+
+* $i$: input feature channel index;
+* $j$: output feature channel index;
+* $k$: Chebyshev basis or polynomial order index.
+
+The learnable parameter $\theta_{i,j,k}$ specifies how much the $k$-th Chebyshev-filtered version of input channel $i$ contributes to output channel $j$.
+
+For one fixed pair $(i,j)$, the filter has $K$ Chebyshev coefficients:
+
+$$
+\theta_{i,j,0},\theta_{i,j,1},\ldots,\theta_{i,j,K-1}.
+$$
+
+There are $F_{\mathrm{in}}F_{\mathrm{out}}$ input-output channel pairs. Therefore, the number of learnable parameters in this graph convolutional layer is:
+
+$$
+K F_{\mathrm{in}}F_{\mathrm{out}}.
+$$
+
+### 3. Why the Layer Sums Over Input Channels
+
+The summation over input channels is analogous to standard multi-channel CNN convolution. In a CNN, one output channel is produced by applying kernels to all input channels and summing the results. Similarly, in graph convolution, one output graph feature map is produced by graph-filtering all input graph feature maps and summing their contributions.
+
+The summation is a linear algebra operation, not a probabilistic assumption. It does not assume that input channels are statistically independent. The input channels may be correlated, redundant, causally related, or jointly shifted. Formula (5) only says that the layer forms a learned linear combination of filtered input features.
+
+The component-level expression makes this clearer. For node $v$:
+
+$$
+y_{s,j}(v)
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}
+\left[T_k(\tilde L)\mathbf{x}_{s,i}\right]_v.
+$$
+
+This is a sum of filtered feature values at the same output node coordinate $v$. The layer learns how much each input channel and each Chebyshev order should contribute through the parameters $\theta_{i,j,k}$.
+
+However, within one linear graph convolutional layer, cross-channel interaction is linear before any nonlinear activation. More complex interactions among variables require nonlinear activations, deeper layers, temporal modules, attention, gating, or explicitly designed interaction features.
+
+### 4. Output Channels Are Not Independent Random Variables
+
+The output channels:
+
+$$
+\mathbf{y}_{s,1},\mathbf{y}_{s,2},\ldots,\mathbf{y}_{s,F_{\mathrm{out}}}
+$$
+
+are different learned feature maps. They are not assumed to be statistically independent random variables.
+
+Each output channel has its own set of parameters:
+
+$$
+\theta_{i,j,k}.
+$$
+
+Therefore, different output channels can learn different graph-structured feature detectors. For example, one output channel may emphasize smooth low-frequency station patterns, while another may emphasize sharper local contrasts, depending on the learned Chebyshev coefficients.
+
+However, the channels are jointly trained under the same loss and can be mixed again by later layers. A better interpretation is that output channels are learned coordinates of a hidden node representation, not independent factors.
+
+### 5. Why Each Output Channel Is Still in $\mathbb{R}^n$
+
+For a fixed sample $s$ and output channel $j$:
+
+$$
+\mathbf{y}_{s,j}\in\mathbb{R}^n.
+$$
+
+This is because graph convolution changes node features, not the node set. For each input channel:
+
+$$
+\mathbf{x}_{s,i}\in\mathbb{R}^n.
+$$
+
+Since $T_k(\tilde L)$ is an $n$ by $n$ graph operator:
+
+$$
+T_k(\tilde L)\mathbf{x}_{s,i}\in\mathbb{R}^n.
+$$
+
+Multiplying by $\theta_{i,j,k}$ keeps the result in $\mathbb{R}^n$, and summing vectors over $i$ and $k$ still gives a vector in $\mathbb{R}^n$. Therefore:
+
+$$
+\mathbf{y}_{s,j}
+=
+\sum_{i=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}
+\in\mathbb{R}^n.
+$$
+
+The full layer maps:
+
+$$
+\mathbf{X}_s\in\mathbb{R}^{n\times F_{\mathrm{in}}}
+$$
+
+to:
+
+$$
+\mathbf{Y}_s\in\mathbb{R}^{n\times F_{\mathrm{out}}}.
+$$
+
+The number of nodes $n$ remains the same. What changes is the feature dimension attached to each node.
+
+### 6. PM2.5 Forecasting Interpretation
+
+For PM2.5 forecasting, input channels may include:
+
+* PM2.5 concentration;
+* temperature;
+* humidity;
+* wind speed;
+* wind direction encoding;
+* pressure;
+* other pollutant variables;
+* historical lag features.
+
+Each input channel is a graph signal over monitoring stations. The graph convolutional layer applies localized graph filters to each variable and combines them into hidden node features.
+
+For example, one output channel may combine:
+
+* local PM2.5 spatial patterns;
+* wind-related spatial transport patterns;
+* humidity-related modulation patterns;
+* station-level anomaly patterns.
+
+These meanings are not guaranteed by the architecture, but they provide possible interpretations to test through experiments.
 
 For STGCN-style models, this is the spatial part of the architecture: graph convolution mixes information across stations, while temporal convolution handles time dynamics. Understanding this separation is important because a forecasting failure may come from temporal modeling, graph construction, or their interaction.
+
+### 7. Reliability Implications
+
+Formula (5) reveals several reliability concerns.
+
+First, all input channels are filtered through the same graph Laplacian. If the graph construction is wrong, then every variable is propagated through a potentially wrong neighborhood structure.
+
+Second, different variables may have different spatial mechanisms. A graph that is suitable for PM2.5 concentration may not be equally suitable for wind, humidity, or temperature.
+
+Third, if some input channels are unstable under distribution shift, missingness, or sensor noise, their graph-filtered representations may contaminate the output channels.
+
+Therefore, reliable spatiotemporal forecasting should not only evaluate final prediction error. It should also examine:
+
+* sensitivity to graph construction;
+* sensitivity to the support size $K$;
+* channel contribution under shift;
+* calibration and coverage degradation;
+* downstream decision cost;
+* whether graph-filtered variables remain meaningful under missingness and noise.
+
+The key research implication is:
+
+A graph convolutional layer does not merely propagate PM2.5. It propagates and mixes all input variables under the same graph-defined geometry. The reliability of this operation depends on whether that graph geometry is valid for the variables and conditions being modeled.
 
 ## Graph Coarsening and Pooling
 
