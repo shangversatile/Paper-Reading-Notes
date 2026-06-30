@@ -45,57 +45,57 @@ This move solves the conceptual definition problem, but not the engineering prob
 
 Let the graph be:
 
-$$
+```math
 G=(V,E,W).
-$$
+```
 
 Here, $V$ is the node set, $E$ is the edge set, and $W$ is the weighted adjacency matrix. This is the paper's starting point for replacing regular-grid convolution with graph-domain filtering. In a PM2.5 station graph, nodes are monitoring stations and $W_{ij}$ records the chosen connection strength between stations $i$ and $j$.
 
 A graph signal is:
 
-$$
+```math
 \mathbf{x}\in\mathbb{R}^n.
-$$
+```
 
 Each entry $x_i$ is a value attached to one graph node. This lets the paper treat graph data as a signal over vertices. In PM2.5 forecasting, $\mathbf{x}$ could represent pollution measurements across all monitoring stations at a fixed time.
 
 The unnormalized graph Laplacian is:
 
-$$
+```math
 L=D-W.
-$$
+```
 
 Here, $D$ is the degree matrix and $W$ is the weighted adjacency matrix. This formula gives the paper the graph operator that measures local variation. In a PM2.5 station graph, $L$ encodes which station differences are treated as local disagreements under the selected graph.
 
 The normalized graph Laplacian is:
 
-$$
+```math
 L=I_n-D^{-1/2}WD^{-1/2}.
-$$
+```
 
 Here, $I_n$ is the $n$ by $n$ identity matrix, and the degree normalization rescales adjacency by node connectivity. The paper uses the Laplacian because it encodes graph geometry. It penalizes differences between connected nodes, so its eigenvectors describe patterns ranging from smooth over the graph to rapidly varying across edges. For PM2.5, the choice between unnormalized and normalized $L$ changes how highly connected stations influence spatial filtering.
 
 Because the Laplacian is symmetric for an undirected weighted graph, it can be decomposed as:
 
-$$
+```math
 L=U\Lambda U^T.
-$$
+```
 
 Here, $U$ contains the graph Fourier modes and $\Lambda$ contains the corresponding graph frequencies. This eigendecomposition is the bridge from graph geometry to spectral filtering in Section 2.1. For PM2.5, changing the station graph changes $L$, which changes $U$, $\Lambda$, and therefore the meaning of graph frequency.
 
 The graph Fourier transform is:
 
-$$
+```math
 \hat{\mathbf{x}}=U^T\mathbf{x}.
-$$
+```
 
 Here, $\hat{\mathbf{x}}$ contains the coefficients of $\mathbf{x}$ in the Laplacian eigenbasis. The transform lets the paper describe filtering by graph frequency instead of by ordered neighborhoods. For station data, $\hat{x}_k$ says how much the PM2.5 field aligns with graph mode $\mathbf{u}_k$.
 
 The inverse transform is:
 
-$$
+```math
 \mathbf{x}=U\hat{\mathbf{x}}.
-$$
+```
 
 This reconstructs the node-domain signal from graph Fourier coefficients. The role of this transform is analogous to classical Fourier analysis, but the basis is determined by the graph rather than by a regular grid. For PM2.5 forecasting, this means the graph construction determines the frequency geometry used by the spatial layer.
 
@@ -103,9 +103,9 @@ This reconstructs the node-domain signal from graph Fourier coefficients. The ro
 
 A graph signal can be filtered by:
 
-$$
+```math
 \mathbf{y}=g_\theta(L)\mathbf{x}=Ug_\theta(\Lambda)U^T\mathbf{x}.
-$$
+```
 
 This equation defines convolution-like filtering on a graph by using the Laplacian spectrum. It transforms the node signal $\mathbf{x}$ into graph-frequency space with $U^T$, modifies frequency components using $g_\theta(\Lambda)$, and reconstructs the filtered signal $\mathbf{y}$ with $U$. The filter is tied to the chosen graph because $L$, $U$, and $\Lambda$ all depend on $W$.
 
@@ -115,9 +115,9 @@ For forecasting, this matters because the graph defines which spatial patterns a
 
 A direct non-parametric spectral filter can be written as:
 
-$$
+```math
 g_\theta(\Lambda)=\mathrm{diag}(\theta).
-$$
+```
 
 Here, $\theta$ contains one learnable parameter per graph frequency. This formula solves the definitional problem of spectral filtering, but it is not a good scalable graph CNN layer. For PM2.5 station graphs, this would make the filter tightly dependent on the eigensystem of one constructed graph.
 
@@ -134,9 +134,9 @@ For PM2.5 forecasting, this is undesirable because local support should be an ex
 
 The paper replaces arbitrary spectral filters with polynomial filters of the Laplacian:
 
-$$
+```math
 g_\theta(L)=\sum_{k=0}^{K-1}\theta_k L^k.
-$$
+```
 
 Here, $\theta_k$ is the learnable coefficient for the $k$-th power of $L$, and $K$ controls the polynomial order. This is the paper's key move from a non-local spectral definition to localized graph filtering. The key fact is that powers of the Laplacian only mix information along graph paths up to a bounded length. A polynomial of order $K$ produces a filter localized within a $K$-hop neighborhood. If two nodes are farther apart than the filter support, the filter does not directly couple them.
 
@@ -148,41 +148,41 @@ Polynomial filters still need to be computed efficiently. The paper uses Chebysh
 
 First, the Laplacian is rescaled:
 
-$$
+```math
 \tilde{L}=\frac{2}{\lambda_{\max}}L-I_n.
-$$
+```
 
 Here, $\lambda_{\max}$ is the largest eigenvalue of $L$, and $\tilde{L}$ is the rescaled Laplacian. This scaling puts the spectrum into a range suitable for Chebyshev recurrence. For PM2.5 station graphs, the scaling choice should be reproducible because it affects the numerical behavior of the graph convolution layer.
 
 The filter is then written as:
 
-$$
+```math
 g_\theta(L)\mathbf{x}=\sum_{k=0}^{K-1}\theta_k T_k(\tilde{L})\mathbf{x}.
-$$
+```
 
 Here, $T_k$ is the Chebyshev polynomial of order $k$. This equation keeps the spectral-filtering interpretation while making the computation possible without explicitly multiplying by $U$. In PM2.5 forecasting, this is what makes sparse station-graph filtering practical.
 
 The scalar recurrence is:
 
-$$
+```math
 T_0(z)=1,\quad T_1(z)=z,\quad T_k(z)=2zT_{k-1}(z)-T_{k-2}(z).
-$$
+```
 
 Here, $z$ is a scalar input to the Chebyshev polynomial. The recurrence lets the paper compute higher-order filter terms from two previous terms. This is the algebraic reason the graph filter can be implemented efficiently.
 
 For graph signals, this becomes:
 
-$$
+```math
 \bar{\mathbf{x}}_0=\mathbf{x},\quad \bar{\mathbf{x}}_1=\tilde{L}\mathbf{x},\quad \bar{\mathbf{x}}_k=2\tilde{L}\bar{\mathbf{x}}_{k-1}-\bar{\mathbf{x}}_{k-2}.
-$$
+```
 
 Here, $\bar{\mathbf{x}}_k$ is the $k$-th recursively computed graph-filtered signal. The important implementation consequence is that each step only needs sparse matrix-vector multiplication by the scaled Laplacian. No explicit graph Fourier transform is needed during filtering. For station graphs, this ties runtime to sparse edges rather than dense spectral basis operations.
 
 The resulting complexity is:
 
-$$
+```math
 O(K\lvert E\rvert).
-$$
+```
 
 Here, $K$ is the filter support size and $|E|$ is the number of graph edges. This is efficient when the graph is sparse. If the station graph is dense or poorly sparsified, this computational advantage weakens and the locality assumption becomes harder to interpret.
 
@@ -192,53 +192,53 @@ Here, $K$ is the filter support size and $|E|$ is the number of graph edges. Thi
 
 The previous filtering discussion considered a single graph signal:
 
-$$
+```math
 \mathbf{y}=g_\theta(L)\mathbf{x},
-$$
+```
 
 where:
 
-$$
+```math
 \mathbf{x}\in\mathbb{R}^n
-$$
+```
 
 and:
 
-$$
+```math
 \mathbf{y}\in\mathbb{R}^n.
-$$
+```
 
 This means one input feature value per node is transformed into one output feature value per node. The node set is unchanged; only the value attached to each node is filtered.
 
 A neural network layer usually has multiple input feature maps and multiple output feature maps. For sample $s$, let:
 
-$$
+```math
 \mathbf{x}_{s,i}\in\mathbb{R}^n
-$$
+```
 
 be the $i$-th input feature map, where:
 
-$$
+```math
 i=1,\ldots,F_{\mathrm{in}}.
-$$
+```
 
 The input feature matrix for sample $s$ can therefore be written as:
 
-$$
+```math
 \mathbf{X}_s= \left[ \mathbf{x}_{s,1}, \mathbf{x}_{s,2}, \ldots, \mathbf{x}_{s,F_{\mathrm{in}}} \right] \in\mathbb{R}^{n\times F_{\mathrm{in}}}.
-$$
+```
 
 Formula (5) in the paper defines the $j$-th output feature map as:
 
-$$
+```math
 \mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} g_{\theta_{i,j}}(L)\mathbf{x}_{s,i},
-$$
+```
 
 where:
 
-$$
+```math
 j=1,\ldots,F_{\mathrm{out}}.
-$$
+```
 
 Thus, each output channel is obtained by filtering all input channels and summing their contributions.
 
@@ -246,15 +246,15 @@ Thus, each output channel is obtained by filtering all input channels and summin
 
 Using Chebyshev filters, each input-output channel filter is expanded as:
 
-$$
+```math
 g_{\theta_{i,j}}(L)\mathbf{x}_{s,i} = \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
-$$
+```
 
 Substituting this expansion into formula (5) gives:
 
-$$
+```math
 \mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
-$$
+```
 
 The indices have the following meanings:
 
@@ -266,15 +266,15 @@ The learnable parameter $\theta_{i,j,k}$ specifies how much the $k$-th Chebyshev
 
 For one fixed pair $(i,j)$, the filter has $K$ Chebyshev coefficients:
 
-$$
+```math
 \theta_{i,j,0},\theta_{i,j,1},\ldots,\theta_{i,j,K-1}.
-$$
+```
 
 There are $F_{\mathrm{in}}F_{\mathrm{out}}$ input-output channel pairs. Therefore, the number of learnable parameters in this graph convolutional layer is:
 
-$$
+```math
 K F_{\mathrm{in}}F_{\mathrm{out}}.
-$$
+```
 
 ### 3. Why the Layer Sums Over Input Channels
 
@@ -284,9 +284,9 @@ The summation is a linear algebra operation, not a probabilistic assumption. It 
 
 The component-level expression makes this clearer. For node $v$:
 
-$$
+```math
 y_{s,j}(v) = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k} \left[T_k(\tilde L)\mathbf{x}_{s,i}\right]_v.
-$$
+```
 
 This is a sum of filtered feature values at the same output node coordinate $v$. The layer learns how much each input channel and each Chebyshev order should contribute through the parameters $\theta_{i,j,k}$.
 
@@ -296,17 +296,17 @@ However, within one linear graph convolutional layer, cross-channel interaction 
 
 The output channels:
 
-$$
+```math
 \mathbf{y}_{s,1},\mathbf{y}_{s,2},\ldots,\mathbf{y}_{s,F_{\mathrm{out}}}
-$$
+```
 
 are different learned feature maps. They are not assumed to be statistically independent random variables.
 
 Each output channel has its own set of parameters:
 
-$$
+```math
 \theta_{i,j,k}.
-$$
+```
 
 Therefore, different output channels can learn different graph-structured feature detectors. For example, one output channel may emphasize smooth low-frequency station patterns, while another may emphasize sharper local contrasts, depending on the learned Chebyshev coefficients.
 
@@ -316,39 +316,39 @@ However, the channels are jointly trained under the same loss and can be mixed a
 
 For a fixed sample $s$ and output channel $j$:
 
-$$
+```math
 \mathbf{y}_{s,j}\in\mathbb{R}^n.
-$$
+```
 
 This is because graph convolution changes node features, not the node set. For each input channel:
 
-$$
+```math
 \mathbf{x}_{s,i}\in\mathbb{R}^n.
-$$
+```
 
 Since $T_k(\tilde L)$ is an $n$ by $n$ graph operator:
 
-$$
+```math
 T_k(\tilde L)\mathbf{x}_{s,i}\in\mathbb{R}^n.
-$$
+```
 
 Multiplying by $\theta_{i,j,k}$ keeps the result in $\mathbb{R}^n$, and summing vectors over $i$ and $k$ still gives a vector in $\mathbb{R}^n$. Therefore:
 
-$$
+```math
 \mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i} \in\mathbb{R}^n.
-$$
+```
 
 The full layer maps:
 
-$$
+```math
 \mathbf{X}_s\in\mathbb{R}^{n\times F_{\mathrm{in}}}
-$$
+```
 
 to:
 
-$$
+```math
 \mathbf{Y}_s\in\mathbb{R}^{n\times F_{\mathrm{out}}}.
-$$
+```
 
 The number of nodes $n$ remains the same. What changes is the feature dimension attached to each node.
 
@@ -384,9 +384,9 @@ For STGCN-style models, this is the spatial part of the architecture: graph conv
 
 Formula (5) mixes multiple input feature channels through the same graph Laplacian:
 
-$$
+```math
 \mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
-$$
+```
 
 This means that every input variable is filtered through the same graph geometry before being combined into output channels.
 
@@ -402,23 +402,23 @@ If an input channel contains sensor noise, missing values, station outage, or sp
 
 The operation:
 
-$$
+```math
 T_k(\tilde L)\mathbf{x}_{s,i}
-$$
+```
 
 does not only use the original value at each node. It creates graph-local features up to $k$ hops. Therefore, a corrupted value in one station can affect a neighborhood of stations after filtering.
 
 A simple perturbation view makes the risk explicit. If input channel $i$ is corrupted by a noise vector $\mathbf{e}_{s,i}$, then the filtered term changes by:
 
-$$
+```math
 T_k(\tilde L)(\mathbf{x}_{s,i}+\mathbf{e}_{s,i}) - T_k(\tilde L)\mathbf{x}_{s,i} = T_k(\tilde L)\mathbf{e}_{s,i}.
-$$
+```
 
 After channel mixing, the contribution of this corruption to output channel $j$ is:
 
-$$
+```math
 \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{e}_{s,i}.
-$$
+```
 
 Thus, graph convolution may transform local data-quality problems into spatially distributed representation errors. Missingness is especially risky if it is encoded as a value or imputed without an explicit missingness indicator, because the graph filter may treat the imputed pattern as a real graph signal.
 
@@ -426,9 +426,9 @@ Thus, graph convolution may transform local data-quality problems into spatially
 
 The output channel is a sum over both input variables and Chebyshev orders:
 
-$$
+```math
 \mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
-$$
+```
 
 If the final prediction fails, it may be unclear whether the cause is:
 
@@ -450,9 +450,9 @@ The model may learn that a certain graph-filtered variable is predictive in the 
 
 For example, humidity or wind speed may be strongly correlated with PM2.5 in one season or region. The model may learn large coefficients for these filtered channels:
 
-$$
+```math
 \theta_{i,j,k}\quad \text{large for a shifted or unstable channel }i.
-$$
+```
 
 However, under temporal shift, seasonal change, extreme weather, or region transfer, the same relationship may break down.
 
@@ -462,17 +462,17 @@ Therefore, the model may rely on spatial-channel shortcuts that perform well und
 
 The output feature maps:
 
-$$
+```math
 \mathbf{y}_{s,1},\ldots,\mathbf{y}_{s,F_{\mathrm{out}}}
-$$
+```
 
 are learned hidden representation coordinates. They should not be directly interpreted as physical mechanisms such as pollution transport, regional background pollution, or local anomaly propagation.
 
 A single output channel may mix multiple variables and multiple Chebyshev orders:
 
-$$
+```math
 \mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L)\mathbf{x}_{s,i}.
-$$
+```
 
 Therefore, output channels require additional analysis before assigning physical meaning. Useful tools include:
 
@@ -573,23 +573,23 @@ Thus, the shared Laplacian in formula (5) should be interpreted as a modeling as
 
 A direct extension is to assign each input channel its own graph Laplacian:
 
-$$
+```math
 L_i.
-$$
+```
 
 Then the multi-feature graph convolution becomes:
 
-$$
+```math
 \mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{k=0}^{K-1} \theta_{i,j,k}T_k(\tilde L_i)\mathbf{x}_{s,i}.
-$$
+```
 
 Here, each input variable is filtered through its own graph geometry before being combined into the output channel.
 
 This is mathematically valid as long as all graph Laplacians are defined over the same node set. Each $L_i$ is still an $n$ by $n$ matrix, so:
 
-$$
+```math
 T_k(\tilde L_i)\mathbf{x}_{s,i}\in\mathbb{R}^n.
-$$
+```
 
 Each filtered term remains an $n$-dimensional node signal, so the filtered results can still be summed or concatenated across channels.
 
@@ -599,31 +599,31 @@ The reliability advantage is that graph-channel mismatch may be reduced. The ris
 
 Instead of assigning one graph per channel, one can define a set of candidate graphs:
 
-$$
+```math
 L^{(1)},L^{(2)},\ldots,L^{(R)}.
-$$
+```
 
 These may represent distance-based, correlation-based, meteorology-informed, learned, or dynamic graph structures.
 
 A mixture version can be written as:
 
-$$
+```math
 \mathbf{y}_{s,j} = \sum_{i=1}^{F_{\mathrm{in}}} \sum_{r=1}^{R} \sum_{k=0}^{K-1} \alpha_{i,r} \theta_{i,j,r,k} T_k(\tilde L^{(r)})\mathbf{x}_{s,i}.
-$$
+```
 
 The coefficient $\alpha_{i,r}$ represents how strongly input channel $i$ uses graph relation $r$. A constrained mixture can require:
 
-$$
+```math
 \alpha_{i,r}\ge 0, \qquad \sum_{r=1}^{R}\alpha_{i,r}=1.
-$$
+```
 
 This approach allows each variable to combine several graph geometries rather than being forced to use one shared graph.
 
 A dynamic version may use:
 
-$$
+```math
 \alpha_{i,1,t},\ldots,\alpha_{i,R,t} = \mathrm{softmax}(f_\phi(\mathbf{z}_t)),
-$$
+```
 
 so that graph-relation weights change with time, meteorological conditions, or regime.
 
@@ -633,33 +633,33 @@ A more flexible extension is to learn the graph structure itself.
 
 For each channel, one may define:
 
-$$
+```math
 W_i=f_\phi(\text{node features},\text{distance},\text{historical statistics}),
-$$
+```
 
 and then construct:
 
-$$
+```math
 L_i=I_n-D_i^{-1/2}W_iD_i^{-1/2}.
-$$
+```
 
 For dynamic propagation, the graph may vary over time:
 
-$$
+```math
 W_{i,t}=f_\phi(\text{meteorology}_t,\text{station embeddings},\text{distance}),
-$$
+```
 
 with:
 
-$$
+```math
 L_{i,t}=I_n-D_{i,t}^{-1/2}W_{i,t}D_{i,t}^{-1/2}.
-$$
+```
 
 Then filtering can use:
 
-$$
+```math
 T_k(\tilde L_{i,t})\mathbf{x}_{t,i}.
-$$
+```
 
 Here, $D_i$ and $D_{i,t}$ are the degree matrices associated with $W_i$ and $W_{i,t}$. This allows the spatial propagation structure to depend on time, variable type, or meteorological regime.
 
@@ -849,9 +849,9 @@ A naive spectral filter is not enough because it can be non-local and computatio
 
 A polynomial filter such as:
 
-$$
+```math
 g_\theta(L)=\sum_{k=0}^{K-1}\theta_k L^k
-$$
+```
 
 has a clear graph interpretation. Here, $L$ is the graph Laplacian, $\theta_k$ is the coefficient for the $k$-th power of $L$, and $K$ controls the filter order. Since $L$ propagates information across graph edges, powers of $L$ correspond to repeated neighborhood propagation. A $K$-order polynomial filter is therefore localized within a $K$-hop neighborhood.
 
@@ -863,9 +863,9 @@ The Chebyshev approximation makes the spectral idea computationally usable. Dire
 
 Chebyshev recurrence allows the filter to be computed through repeated sparse matrix-vector multiplications. This avoids explicitly computing the Fourier basis and gives complexity approximately proportional to:
 
-$$
+```math
 O(K\lvert E\rvert)
-$$
+```
 
 where $K$ is the filter support size and $|E|$ is the number of graph edges.
 
@@ -908,17 +908,17 @@ The paper defines a weighted graph $G=(V,E,W)$, where $W$ is the weighted adjace
 
 A raw distance $d_{ij}$ is usually not used directly as $W_{ij}$. Instead, distance or other relational evidence is transformed into a similarity or influence weight, for example:
 
-$$
+```math
 W_{ij}=\exp\left(-\frac{d_{ij}^2}{\sigma^2}\right).
-$$
+```
 
 This formula turns the physical distance $d_{ij}$ into a connection strength $W_{ij}$, with $\sigma$ controlling the distance scale. In the paper's logic, $W$ defines the graph on which the Laplacian is built. For a PM2.5 station graph, this means $W_{ij}$ should be interpreted as a normalized or dimensionless connection strength, not necessarily as a physical distance.
 
 This matters because the graph Laplacian mixes edge weights with node signals:
 
-$$
+```math
 (L\mathbf{x})_i=\sum_j W_{ij}(x_i-x_j).
-$$
+```
 
 Here, $\mathbf{x}$ is the graph signal, $x_i-x_j$ is the signal difference between stations $i$ and $j$, and $W_{ij}$ controls how much that difference matters under the chosen graph structure. In PM2.5 forecasting, graph construction is already a modeling assumption. A distance-based graph, a correlation-based graph, a meteorology-informed graph, and a wind-informed graph define different meanings of local inconsistency.
 
@@ -926,43 +926,43 @@ Here, $\mathbf{x}$ is the graph signal, $x_i-x_j$ is the signal difference betwe
 
 For the unnormalized graph Laplacian,
 
-$$
+```math
 L=D-W,
-$$
+```
 
 where
 
-$$
+```math
 D_{ii}=\sum_j W_{ij}.
-$$
+```
 
 The first formula defines the Laplacian as degree minus adjacency, and the second formula defines the weighted degree of node $i$. In Section 2.1, these objects define the graph difference operator used to build spectral graph convolution. For PM2.5 station graphs, $D_{ii}$ measures the total graph connection strength around station $i$.
 
 For a graph signal $\mathbf{x}\in\mathbb{R}^n$, the $i$-th component of $L\mathbf{x}$ is:
 
-$$
+```math
 (L\mathbf{x})_i=(D\mathbf{x})_i-(W\mathbf{x})_i.
-$$
+```
 
 This equation separates the self-weighted degree term from the neighbor aggregation term. In the paper's logic, it shows why $L$ acts like a graph difference operator. For PM2.5, it compares station $i$ with the weighted station neighborhood defined by $W$.
 
 Since
 
-$$
+```math
 (D\mathbf{x})_i=D_{ii}x_i=\left(\sum_j W_{ij}\right)x_i
-$$
+```
 
 and
 
-$$
+```math
 (W\mathbf{x})_i=\sum_j W_{ij}x_j,
-$$
+```
 
 we obtain:
 
-$$
+```math
 (L\mathbf{x})_i =\sum_j W_{ij}x_i-\sum_j W_{ij}x_j =\sum_j W_{ij}(x_i-x_j).
-$$
+```
 
 This derivation shows that $L\mathbf{x}$ measures the weighted disagreement between each node and its neighbors. If node $i$ has a similar value to its strongly connected neighbors, then $(L\mathbf{x})_i$ is small. If node $i$ differs sharply from strongly connected neighbors, then $(L\mathbf{x})_i$ is large. In PM2.5 forecasting, $L\mathbf{x}$ measures how inconsistent a station's pollution value is relative to its graph-defined neighborhood, but this interpretation is valid only if the graph-defined neighborhood is meaningful.
 
@@ -970,9 +970,9 @@ This derivation shows that $L\mathbf{x}$ measures the weighted disagreement betw
 
 The quadratic form of the unnormalized Laplacian is:
 
-$$
+```math
 \mathbf{x}^T L \mathbf{x} =\frac{1}{2}\sum_{i,j}W_{ij}(x_i-x_j)^2.
-$$
+```
 
 This formula turns local edge disagreements into one global graph roughness score. In the paper's logic, it explains why the Laplacian eigenvalues can be interpreted as graph frequencies: high-energy patterns vary strongly across edges. For PM2.5, the quantity is large when strongly connected stations have sharply different pollution values.
 
@@ -995,39 +995,39 @@ Thus, a signal is graph-smooth when strongly connected nodes have similar values
 
 Because the graph Laplacian is symmetric positive semidefinite, it can be decomposed as:
 
-$$
+```math
 L=U\Lambda U^T.
-$$
+```
 
 Here, $U$ is the eigenvector matrix and $\Lambda$ is the diagonal eigenvalue matrix. This is the spectral foundation used by the paper to define graph Fourier analysis. For PM2.5 station graphs, changing $W$ changes $L$, and therefore changes the eigenspace used by graph filtering.
 
 The eigenvector matrix is:
 
-$$
+```math
 U=[\mathbf{u}_1,\mathbf{u}_2,\ldots,\mathbf{u}_n],
-$$
+```
 
 and the eigenvalue matrix is:
 
-$$
+```math
 \Lambda=\mathrm{diag}(\lambda_1,\lambda_2,\ldots,\lambda_n).
-$$
+```
 
 Here, each $\mathbf{u}_k$ is an orthonormal eigenvector and each $\lambda_k$ is its corresponding eigenvalue. These symbols define the graph Fourier coordinate system in Section 2.1. In PM2.5 forecasting, each $\mathbf{u}_k$ is a station-level variation pattern induced by the chosen graph.
 
 Each eigenvector satisfies:
 
-$$
+```math
 L\mathbf{u}_k=\lambda_k\mathbf{u}_k.
-$$
+```
 
 This means that $\mathbf{u}_k$ is a stable mode of variation under the graph Laplacian: applying the graph difference operator $L$ does not change the direction of the mode; it only scales it by $\lambda_k$. The eigenspace of $L$ can therefore be understood as the space of graph-induced variation patterns. Each eigenvector is an independent pattern of variation over the nodes, and the eigenvalue measures how rough or smooth that pattern is with respect to the graph.
 
 For a unit-norm eigenvector $\mathbf{u}_k$:
 
-$$
+```math
 \mathbf{u}_k^T L \mathbf{u}_k=\lambda_k.
-$$
+```
 
 This formula connects eigenvalues directly to graph smoothness energy. Small $\lambda_k$ means the eigenvector varies smoothly across graph edges, while large $\lambda_k$ means the eigenvector changes sharply across graph edges. This is the key reason why the paper treats Laplacian eigenvectors as graph Fourier modes.
 
@@ -1046,17 +1046,17 @@ Therefore, the eigenvectors of $L$ play the role of Fourier modes:
 
 A graph signal $\mathbf{x}$ can be represented in the Laplacian eigenbasis:
 
-$$
+```math
 \hat{\mathbf{x}}=U^T\mathbf{x}.
-$$
+```
 
 Here, $\hat{\mathbf{x}}$ is the graph Fourier transform of $\mathbf{x}$, and $\hat{x}_k$ is the coefficient of $\mathbf{x}$ along graph mode $\mathbf{u}_k$. In the paper's logic, this representation makes spectral filtering possible. For PM2.5, it describes which graph-induced spatial variation modes compose a station-level pollution field.
 
 The inverse transform is:
 
-$$
+```math
 \mathbf{x}=U\hat{\mathbf{x}}.
-$$
+```
 
 This formula reconstructs the node-domain signal from its graph Fourier coefficients. Thus, node space answers "where is the signal value located?", while graph spectral space answers "which graph variation modes compose this signal?"
 
@@ -1064,35 +1064,35 @@ This formula reconstructs the node-domain signal from its graph Fourier coeffici
 
 If
 
-$$
+```math
 \mathbf{x}=U\hat{\mathbf{x}},
-$$
+```
 
 then:
 
-$$
+```math
 \mathbf{x}^T L \mathbf{x} =(U\hat{\mathbf{x}})^T L (U\hat{\mathbf{x}}).
-$$
+```
 
 These equations substitute the graph Fourier expansion into the Laplacian quadratic form. In the paper's logic, this is the bridge between graph smoothness and graph frequency. For PM2.5, it explains how roughness of a station pollution field can be decomposed by graph-induced spatial modes.
 
 Using
 
-$$
+```math
 L=U\Lambda U^T
-$$
+```
 
 and
 
-$$
+```math
 U^TU=I_n,
-$$
+```
 
 we get:
 
-$$
+```math
 \mathbf{x}^T L \mathbf{x} =\hat{\mathbf{x}}^T\Lambda\hat{\mathbf{x}} =\sum_{k=1}^n \lambda_k \hat{x}_k^2.
-$$
+```
 
 This equation is the rigorous bridge between smoothness and frequency. It says that the total graph roughness of $\mathbf{x}$ is the weighted sum of its spectral coefficients, where the weights are Laplacian eigenvalues. Energy placed on large $\lambda_k$ modes contributes more to roughness. Energy placed on small $\lambda_k$ modes contributes less. This is why the eigenvalues can be interpreted as graph frequencies.
 
@@ -1104,17 +1104,17 @@ The eigenspace of $L$ is a graph-structured constraint space. It partitions poss
 
 Equivalently:
 
-$$
+```math
 L=U\Lambda U^T
-$$
+```
 
 means that the graph Laplacian can be diagonalized in a coordinate system whose axes are graph variation modes. In that coordinate system, $L$ does not mix modes; it only scales each mode by its graph frequency $\lambda_k$. For PM2.5, this means graph frequency is not temporal frequency; it is a property of the station graph and the signal variation across that graph.
 
 This is why spectral filtering can be defined as:
 
-$$
+```math
 \mathbf{y}=Ug_\theta(\Lambda)U^T\mathbf{x}.
-$$
+```
 
 The operation first decomposes $\mathbf{x}$ into graph frequency components, modifies each component according to a learnable frequency response $g_\theta$, and then reconstructs the filtered signal in node space. In the paper's logic, this defines graph-domain filtering before the paper later makes it localized and efficient with polynomial and Chebyshev filters.
 
@@ -1147,45 +1147,45 @@ A key clarification is that $\Lambda$, $U^T\mathbf{x}$, and $g_\theta(\Lambda)$ 
 
 The eigenvalue matrix
 
-$$
+```math
 \Lambda=\mathrm{diag}(\lambda_1,\lambda_2,\ldots,\lambda_n)
-$$
+```
 
 defines the graph frequency positions. These frequencies are determined by the graph Laplacian and therefore by the graph structure. In the logic of Section 2.1, $\Lambda$ comes from the eigendecomposition of $L$ and fixes the graph-frequency coordinate system.
 
 The graph Fourier transform
 
-$$
+```math
 \hat{\mathbf{x}}=U^T\mathbf{x}
-$$
+```
 
 gives the spectral coefficients of the input signal. The coefficient $\hat{x}_k$ tells how much of the input signal lies along the $k$-th graph Fourier mode. For a PM2.5 station graph, this describes how much the current pollution field aligns with each graph-induced spatial variation pattern.
 
 The filter response
 
-$$
+```math
 g_\theta(\Lambda)
-$$
+```
 
 does not define the frequencies themselves. Instead, it defines how strongly the model keeps, suppresses, or amplifies each frequency component. This is the learnable part of the spectral filtering step, not the graph frequency axis itself.
 
 The basic spectral filtering operation is:
 
-$$
+```math
 \mathbf{y}=Ug_\theta(\Lambda)U^T\mathbf{x}.
-$$
+```
 
 Equivalently, in the graph Fourier domain:
 
-$$
+```math
 \hat{\mathbf{y}}=g_\theta(\Lambda)\hat{\mathbf{x}}.
-$$
+```
 
 For each graph frequency, this means:
 
-$$
+```math
 \hat{y}_k=g_\theta(\lambda_k)\hat{x}_k.
-$$
+```
 
 Thus:
 
@@ -1212,17 +1212,17 @@ However, whether these high-frequency components are useful depends on the task 
 
 If high-frequency components mostly represent noise, the learned filter should suppress them:
 
-$$
+```math
 g_\theta(\lambda_k)\approx 0
-$$
+```
 
 for large $\lambda_k$.
 
 If high-frequency components represent meaningful local anomalies or sharp pollution boundaries, the learned filter may preserve or amplify them:
 
-$$
+```math
 g_\theta(\lambda_k)>1
-$$
+```
 
 for some high-frequency modes.
 
@@ -1232,21 +1232,21 @@ Therefore, high-frequency content in the input is a property of the signal. High
 
 The paper first introduces a non-parametric spectral filter:
 
-$$
+```math
 g_\theta(\Lambda)=\mathrm{diag}(\theta),
-$$
+```
 
 where
 
-$$
+```math
 \theta\in\mathbb{R}^n.
-$$
+```
 
 This means each graph frequency receives its own independent parameter:
 
-$$
+```math
 \hat{y}_k=\theta_k\hat{x}_k.
-$$
+```
 
 This form is highly expressive because every frequency can be controlled separately. However, the paper points out two major problems:
 
@@ -1273,29 +1273,29 @@ For reliable PM2.5 forecasting, this implies that graph construction and learned
 
 The paper first introduces the non-parametric spectral filter:
 
-$$
+```math
 g_\theta(\Lambda)=\mathrm{diag}(\theta),
-$$
+```
 
 where
 
-$$
+```math
 \theta\in\mathbb{R}^n.
-$$
+```
 
 In the graph Fourier domain, this looks simple:
 
-$$
+```math
 \hat{y}_k=\theta_k\hat{x}_k.
-$$
+```
 
 This means that each graph frequency component receives an independent learned scaling coefficient.
 
 However, locality is not judged in the graph Fourier domain. Locality is judged in the node domain. The node-space linear operator is:
 
-$$
+```math
 A=g_\theta(L)=U\mathrm{diag}(\theta)U^T.
-$$
+```
 
 Although $g_\theta(\Lambda)$ is diagonal in the spectral basis, $A$ is generally dense in the node basis. This is why a frequency-domain diagonal filter does not automatically behave like a local convolution kernel over graph nodes.
 
@@ -1303,15 +1303,15 @@ Although $g_\theta(\Lambda)$ is diagonal in the spectral basis, $A$ is generally
 
 The $(i,j)$ entry of $A$ is:
 
-$$
+```math
 A_{ij}=\sum_{k=1}^{n}\theta_k U_{ik}U_{jk}.
-$$
+```
 
 Therefore, the output at node $i$ is:
 
-$$
+```math
 y_i=\sum_{j=1}^{n}A_{ij}x_j =\sum_{j=1}^{n} \left( \sum_{k=1}^{n} \theta_k U_{ik}U_{jk} \right) x_j.
-$$
+```
 
 This shows that node $i$ may depend on many or even all nodes $j$ in the graph.
 
@@ -1325,9 +1325,9 @@ Frequency-domain diagonal does not mean node-domain local.
 
 A CNN-like graph filter should satisfy a locality condition. If the graph distance between node $i$ and node $j$ is greater than $K$, then node $j$ should not directly influence the output at node $i$:
 
-$$
+```math
 A_{ij}=0 \quad \mathrm{when} \quad d_G(i,j)>K.
-$$
+```
 
 A non-parametric spectral filter does not guarantee this condition.
 
@@ -1339,9 +1339,9 @@ A useful way to understand localization is to apply the filter to a delta signal
 
 Let $\boldsymbol{\delta}_i$ be a signal that is $1$ at node $i$ and $0$ elsewhere. Then:
 
-$$
+```math
 g_\theta(L)\boldsymbol{\delta}_i
-$$
+```
 
 is the graph filter kernel centered at node $i$.
 
@@ -1349,9 +1349,9 @@ If the filter is localized, this output should be nonzero only around node $i$.
 
 But for the non-parametric spectral filter,
 
-$$
+```math
 g_\theta(L)\boldsymbol{\delta}_i =U\mathrm{diag}(\theta)U^T\boldsymbol{\delta}_i,
-$$
+```
 
 the response may be spread across many nodes. This means that a signal placed at one node can influence distant nodes after filtering.
 
@@ -1368,15 +1368,15 @@ The non-parametric filter is too free. It gives every graph frequency an indepen
 
 This motivates the polynomial parametrization:
 
-$$
+```math
 g_\theta(\Lambda)=\sum_{k=0}^{K-1}\theta_k\Lambda^k.
-$$
+```
 
 Using the eigendecomposition of the Laplacian, this corresponds to the node-space operator:
 
-$$
+```math
 g_\theta(L)=\sum_{k=0}^{K-1}\theta_k L^k.
-$$
+```
 
 This is important because powers of $L$ have graph-local support: $L^k$ can only connect nodes within approximately $k$ graph hops. Therefore, polynomial filters constrain the spectral filter to become localized in the node domain.
 
@@ -1407,47 +1407,47 @@ Polynomial filters are the paper's key restriction on the spectral filter class.
 
 The non-parametric spectral filter is:
 
-$$
+```math
 g_\theta(\Lambda)=\mathrm{diag}(\theta),
-$$
+```
 
 where
 
-$$
+```math
 \theta\in\mathbb{R}^n.
-$$
+```
 
 This gives every graph frequency an independent parameter. In the graph Fourier domain, this is maximally flexible:
 
-$$
+```math
 \hat{y}_k=\theta_k\hat{x}_k.
-$$
+```
 
 However, this flexibility has two costs. First, it has no node-space locality guarantee, because $U\mathrm{diag}(\theta)U^T$ is generally dense. Second, its learning complexity grows with the number of nodes, because it requires $O(n)$ learnable parameters.
 
 The polynomial filter instead uses:
 
-$$
+```math
 g_\theta(\Lambda)=\sum_{k=0}^{K-1}\theta_k\Lambda^k,
-$$
+```
 
 where
 
-$$
+```math
 \theta\in\mathbb{R}^K.
-$$
+```
 
 This means the filter no longer learns one free parameter per graph frequency. Instead, it learns a structured frequency response curve:
 
-$$
+```math
 g_\theta(\lambda)=\sum_{k=0}^{K-1}\theta_k\lambda^k.
-$$
+```
 
 For each eigenvalue $\lambda_i$, the response is:
 
-$$
+```math
 g_\theta(\lambda_i)=\theta_0+\theta_1\lambda_i+\theta_2\lambda_i^2+\cdots+\theta_{K-1}\lambda_i^{K-1}.
-$$
+```
 
 The first benefit is parameter efficiency: the number of learnable parameters becomes $O(K)$ instead of $O(n)$. The second benefit is locality, because this polynomial frequency response can be rewritten as a polynomial of the Laplacian in node space.
 
@@ -1455,19 +1455,19 @@ The first benefit is parameter efficiency: the number of learnable parameters be
 
 The key reason polynomial filters restore locality is that the graph Laplacian is diagonalized by the graph Fourier basis:
 
-$$
+```math
 L=U\Lambda U^T.
-$$
+```
 
 Since the eigenvectors are orthonormal,
 
-$$
+```math
 U^TU=I_n.
-$$
+```
 
 For $m=2$:
 
-$$
+```math
 \begin{aligned}
 L^2
 &=(U\Lambda U^T)(U\Lambda U^T) \\
@@ -1475,17 +1475,17 @@ L^2
 &=U\Lambda I_n\Lambda U^T \\
 &=U\Lambda^2U^T.
 \end{aligned}
-$$
+```
 
 By the same argument, for any positive integer $m$:
 
-$$
+```math
 L^m=U\Lambda^mU^T.
-$$
+```
 
 Therefore:
 
-$$
+```math
 \begin{aligned}
 \sum_{k=0}^{K-1}\theta_kL^k
 &=\sum_{k=0}^{K-1}\theta_kU\Lambda^kU^T \\
@@ -1495,13 +1495,13 @@ $$
 \right)
 U^T.
 \end{aligned}
-$$
+```
 
 The expression inside the parentheses is exactly $g_\theta(\Lambda)$. Thus:
 
-$$
+```math
 g_\theta(L) =Ug_\theta(\Lambda)U^T =\sum_{k=0}^{K-1}\theta_kL^k.
-$$
+```
 
 This is the central mathematical bridge in Section 2.1. A polynomial frequency response can be implemented directly as a polynomial of the graph Laplacian in node space. The model no longer needs to apply a dense arbitrary spectral operator at every layer.
 
@@ -1509,47 +1509,47 @@ This is the central mathematical bridge in Section 2.1. A polynomial frequency r
 
 For the unnormalized Laplacian,
 
-$$
+```math
 L=D-W.
-$$
+```
 
 For $i\neq j$,
 
-$$
+```math
 L_{ij}=-W_{ij}.
-$$
+```
 
 Thus, if nodes $i$ and $j$ are not connected by an edge, then $W_{ij}=0$ and $L_{ij}=0$. This means that the off-diagonal nonzero entries of $L$ only connect one-hop neighbors. The diagonal entries preserve self-information through the degree term. The normalized Laplacian changes the weights, but it has the same basic off-diagonal sparsity pattern when the graph is undirected and degrees are nonzero.
 
 For $L^2$:
 
-$$
+```math
 (L^2)_{ij}=\sum_m L_{im}L_{mj}.
-$$
+```
 
 This term can be nonzero only if there exists an intermediate node $m$ such that:
 
-$$
+```math
 L_{im}\neq 0
-$$
+```
 
 and
 
-$$
+```math
 L_{mj}\neq 0.
-$$
+```
 
 This corresponds to a path:
 
-$$
+```math
 i\rightarrow m\rightarrow j.
-$$
+```
 
 Therefore, $L^2$ can transmit information across two-hop neighborhoods. More generally, $(L^k)_{ij}$ can be nonzero only if there exists a path from $i$ to $j$ of length at most $k$. Therefore:
 
-$$
+```math
 d_G(i,j)>k \quad\Rightarrow\quad (L^k)_{ij}=0.
-$$
+```
 
 This is why a polynomial in $L$ has graph-local support. If the highest power of $L$ is $K-1$, then the filter can only directly combine information within a bounded graph-hop neighborhood. The exact off-by-one convention depends on whether $K$ denotes the number of coefficients, the polynomial order, or the support size. The essential point is that the maximum power of $L$ determines the maximum graph-hop range.
 
@@ -1557,21 +1557,21 @@ This is why a polynomial in $L$ has graph-local support. If the highest power of
 
 By convention:
 
-$$
+```math
 L^0=I_n.
-$$
+```
 
 This is the identity matrix, not a new graph operator. Therefore:
 
-$$
+```math
 L^0\mathbf{x}=I_n\mathbf{x}=\mathbf{x}.
-$$
+```
 
 In the polynomial filter,
 
-$$
+```math
 g_\theta(L) =\theta_0I_n+\theta_1L+\theta_2L^2+\cdots+\theta_{K-1}L^{K-1},
-$$
+```
 
 the first term $\theta_0I_n$ corresponds to zero-hop self-information. It preserves each node's own signal before mixing information through graph neighborhoods.
 
@@ -1592,33 +1592,33 @@ This is not true for arbitrary matrices. It holds here because the paper conside
 
 Therefore:
 
-$$
+```math
 U^TU=I_n
-$$
+```
 
 and
 
-$$
+```math
 UU^T=I_n.
-$$
+```
 
 Hence:
 
-$$
+```math
 U^{-1}=U^T.
-$$
+```
 
 This is why the graph Fourier transform is written as:
 
-$$
+```math
 \hat{\mathbf{x}}=U^T\mathbf{x},
-$$
+```
 
 and the inverse graph Fourier transform is:
 
-$$
+```math
 \mathbf{x}=U\hat{\mathbf{x}}.
-$$
+```
 
 If the graph were directed, or if the relevant graph operator were not symmetric, this simple orthogonal Fourier basis would generally not apply.
 
@@ -1630,9 +1630,9 @@ A non-parametric spectral filter may mix information from distant stations in an
 
 A polynomial filter makes the dependency range explicit:
 
-$$
+```math
 K=\text{the assumed graph-hop range of useful spatial dependency}.
-$$
+```
 
 Thus, $K$ is not merely a tuning parameter. It is a modeling assumption about how far useful pollution-related information can propagate on the chosen graph.
 
@@ -1654,15 +1654,15 @@ Chebyshev recurrence should not be understood as a simple abbreviation of $L^k$.
 
 The correct relationship is:
 
-$$
+```math
 T_k(\tilde L)\neq L^k.
-$$
+```
 
 Instead:
 
-$$
+```math
 T_k(\tilde L)\in \mathrm{span}\{I_n,L,L^2,\ldots,L^k\}.
-$$
+```
 
 That is, $T_k(\tilde L)$ is a degree-$k$ polynomial in $L$. It is not the same as the monomial $L^k$, but it does not leave the polynomial-filtering framework. It remains a graph-local polynomial operator.
 
@@ -1672,67 +1672,67 @@ The recurrence changes the polynomial basis and the computational path. It does 
 
 A standard polynomial filter can be written using the monomial basis:
 
-$$
+```math
 g_\theta(L)\mathbf{x}=\sum_{k=0}^{K-1}\theta_kL^k\mathbf{x}.
-$$
+```
 
 This uses the basis:
 
-$$
+```math
 I_n,L,L^2,L^3,\ldots.
-$$
+```
 
 The Chebyshev filter instead uses:
 
-$$
+```math
 g_\theta(L)\mathbf{x}=\sum_{k=0}^{K-1}\theta_kT_k(\tilde L)\mathbf{x}.
-$$
+```
 
 This uses the basis:
 
-$$
+```math
 T_0(\tilde L),T_1(\tilde L),T_2(\tilde L),\ldots.
-$$
+```
 
 Both are polynomial bases. The difference is that Chebyshev polynomials provide a numerically stable and recursively computable basis for approximating spectral filter responses.
 
 The first few Chebyshev polynomials are:
 
-$$
+```math
 T_0(z)=1.
-$$
+```
 
-$$
+```math
 T_1(z)=z.
-$$
+```
 
-$$
+```math
 T_2(z)=2z^2-1.
-$$
+```
 
-$$
+```math
 T_3(z)=4z^3-3z.
-$$
+```
 
 After substituting the scaled Laplacian, the constant polynomial becomes the identity matrix:
 
-$$
+```math
 T_0(\tilde L)=I_n.
-$$
+```
 
 The next terms are:
 
-$$
+```math
 T_1(\tilde L)=\tilde L.
-$$
+```
 
-$$
+```math
 T_2(\tilde L)=2\tilde L^2-I_n.
-$$
+```
 
-$$
+```math
 T_3(\tilde L)=4\tilde L^3-3\tilde L.
-$$
+```
 
 These terms are still polynomials of the graph Laplacian after substituting the scaled Laplacian. The basis changes from monomials to Chebyshev polynomials, but the filter remains a finite polynomial graph filter.
 
@@ -1740,27 +1740,27 @@ These terms are still polynomials of the graph Laplacian after substituting the 
 
 The scaled Laplacian is:
 
-$$
+```math
 \tilde L=\frac{2L}{\lambda_{\max}}-I_n.
-$$
+```
 
 The corresponding scaled eigenvalue matrix is:
 
-$$
+```math
 \tilde \Lambda=\frac{2\Lambda}{\lambda_{\max}}-I_n.
-$$
+```
 
 The purpose is to map the original Laplacian eigenvalues from:
 
-$$
+```math
 [0,\lambda_{\max}]
-$$
+```
 
 to:
 
-$$
+```math
 [-1,1].
-$$
+```
 
 This matters because Chebyshev polynomials are stable and orthogonal on the interval $[-1,1]$. Without this scaling, high-order polynomial terms may become numerically unstable when eigenvalues are large.
 
@@ -1770,61 +1770,61 @@ Thus, scaling is not a change of graph structure. It is a numerical normalizatio
 
 Let:
 
-$$
+```math
 a=\frac{2}{\lambda_{\max}}.
-$$
+```
 
 Then:
 
-$$
+```math
 \tilde L=aL-I_n.
-$$
+```
 
 For the first order:
 
-$$
+```math
 T_1(\tilde L)=\tilde L=aL-I_n.
-$$
+```
 
 Therefore:
 
-$$
+```math
 T_1(\tilde L)\mathbf{x}=aL\mathbf{x}-\mathbf{x}.
-$$
+```
 
 This mixes 0-hop self-information and 1-hop graph-difference information.
 
 For the second order:
 
-$$
+```math
 T_2(\tilde L)=2\tilde L^2-I_n.
-$$
+```
 
 Since:
 
-$$
+```math
 \tilde L^2=(aL-I_n)^2=a^2L^2-2aL+I_n,
-$$
+```
 
 we have:
 
-$$
+```math
 T_2(\tilde L)=2a^2L^2-4aL+I_n.
-$$
+```
 
 Therefore:
 
-$$
+```math
 T_2(\tilde L)\mathbf{x}=2a^2L^2\mathbf{x}-4aL\mathbf{x}+\mathbf{x}.
-$$
+```
 
 This shows that $T_2(\tilde L)\mathbf{x}$ is not simply $L^2\mathbf{x}$. It is a stable combination of 0-hop, 1-hop, and 2-hop graph information.
 
 More generally, $T_k(\tilde L)\mathbf{x}$ is a combination of:
 
-$$
+```math
 I_n\mathbf{x},L\mathbf{x},L^2\mathbf{x},\ldots,L^k\mathbf{x}.
-$$
+```
 
 Therefore, it can contain information up to $k$ graph hops, but not beyond $k$ hops.
 
@@ -1832,63 +1832,63 @@ Therefore, it can contain information up to $k$ graph hops, but not beyond $k$ h
 
 The recurrence relation is:
 
-$$
+```math
 T_k(z)=2zT_{k-1}(z)-T_{k-2}(z),
-$$
+```
 
 with:
 
-$$
+```math
 T_0(z)=1,\qquad T_1(z)=z.
-$$
+```
 
 Substituting $z=\tilde L$ gives:
 
-$$
+```math
 T_k(\tilde L)=2\tilde LT_{k-1}(\tilde L)-T_{k-2}(\tilde L).
-$$
+```
 
 Instead of constructing the matrix $T_k(\tilde L)$, the paper defines:
 
-$$
+```math
 \bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}.
-$$
+```
 
 Then:
 
-$$
+```math
 \bar{\mathbf{x}}_0=\mathbf{x}.
-$$
+```
 
-$$
+```math
 \bar{\mathbf{x}}_1=\tilde L\mathbf{x}.
-$$
+```
 
 For $k\ge 2$:
 
-$$
+```math
 \bar{\mathbf{x}}_k=2\tilde L\bar{\mathbf{x}}_{k-1}-\bar{\mathbf{x}}_{k-2}.
-$$
+```
 
 This is the key computational simplification.
 
 The model does not need to explicitly construct:
 
-$$
+```math
 L^2,L^3,\ldots,L^k.
-$$
+```
 
 It also does not need to explicitly construct:
 
-$$
+```math
 T_k(\tilde L).
-$$
+```
 
 It only needs to recursively compute the vectors:
 
-$$
+```math
 \bar{\mathbf{x}}_0,\bar{\mathbf{x}}_1,\ldots,\bar{\mathbf{x}}_{K-1}.
-$$
+```
 
 Each recursive step requires one multiplication of the sparse matrix $\tilde L$ with a vector.
 
@@ -1896,9 +1896,9 @@ Each recursive step requires one multiplication of the sparse matrix $\tilde L$ 
 
 The direct spectral filtering form is:
 
-$$
+```math
 \mathbf{y}=Ug_\theta(\Lambda)U^T\mathbf{x}.
-$$
+```
 
 This requires multiplication by the dense graph Fourier basis $U$, which costs $O(n^2)$ and requires storing or computing the eigenbasis.
 
@@ -1911,21 +1911,21 @@ Chebyshev recurrence avoids this during filtering. More precisely, it avoids:
 
 The final filtering operation is:
 
-$$
+```math
 \mathbf{y}=\sum_{k=0}^{K-1}\theta_k\bar{\mathbf{x}}_k.
-$$
+```
 
 Equivalently:
 
-$$
+```math
 \mathbf{y}=[\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_1,\ldots,\bar{\mathbf{x}}_{K-1}]\theta.
-$$
+```
 
 Since each $\bar{\mathbf{x}}_k$ is computed by one sparse Laplacian-vector multiplication, each step costs $O(|E|)$ on a sparse graph. Across $K$ terms, the paper's localized filtering cost is:
 
-$$
+```math
 O(K\lvert E\rvert).
-$$
+```
 
 The final weighted sum over the $K$ vectors costs $O(Kn)$, which is compatible with the same sparse-graph scaling when $|E|$ is proportional to graph size. This is the computational meaning of fast localized spectral filtering.
 
@@ -1945,41 +1945,41 @@ For a PM2.5 station graph, let $\mathbf{x}_t$ be the PM2.5 signal at time $t$.
 
 Then:
 
-$$
+```math
 \bar{\mathbf{x}}_0=\mathbf{x}_t
-$$
+```
 
 is the original station-level signal.
 
 The first recursive term is:
 
-$$
+```math
 \bar{\mathbf{x}}_1=\tilde L\mathbf{x}_t
-$$
+```
 
 which contains one-hop local contrast or local graph-difference information.
 
 The second recursive term is:
 
-$$
+```math
 \bar{\mathbf{x}}_2=T_2(\tilde L)\mathbf{x}_t
-$$
+```
 
 which contains a stable combination of 0-hop, 1-hop, and 2-hop graph information.
 
 More generally:
 
-$$
+```math
 \bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}_t
-$$
+```
 
 contains graph-structured information up to $k$ hops.
 
 The learned coefficients $\theta_k$ determine how these different graph-local patterns are combined into a spatial feature representation:
 
-$$
+```math
 \mathbf{h}_t=\sum_{k=0}^{K-1}\theta_k\bar{\mathbf{x}}_k.
-$$
+```
 
 This provides an efficient local spatial feature extractor. It is not a reliability guarantee. If the graph construction is wrong, Chebyshev recurrence will still efficiently propagate information over the wrong neighborhoods.
 
@@ -2011,9 +2011,9 @@ $K$ is not learned by gradient descent as a model parameter. It is a model-desig
 
 Increasing $K$ lets the filter use information from a larger graph-hop neighborhood. It also increases parameter count and computation approximately linearly, because the layer must compute and combine more Chebyshev basis features:
 
-$$
+```math
 \mathbf{y}=\sum_{k=0}^{K-1}\theta_k\bar{\mathbf{x}}_k.
-$$
+```
 
 A small $K$ makes the filter more local and computationally cheaper, but it may miss useful long-range spatial dependency. A large $K$ allows broader spatial mixing, but it may also mix unrelated nodes and amplify graph mismatch.
 
@@ -2032,9 +2032,9 @@ Thus, $K$ should not be treated as a purely mechanical tuning parameter. It repr
 
 A monomial polynomial filter has the form:
 
-$$
+```math
 g_\theta(L)\mathbf{x} = \theta_0I_n\mathbf{x} + \theta_1L\mathbf{x} + \theta_2L^2\mathbf{x} + \cdots.
-$$
+```
 
 This basis has a relatively direct node-space interpretation:
 
@@ -2047,49 +2047,49 @@ Even in the monomial basis, however, $L^k\mathbf{x}$ should not be interpreted a
 
 For example, if the normalized Laplacian is written as:
 
-$$
+```math
 L=I_n-S,
-$$
+```
 
 where $S=D^{-1/2}WD^{-1/2}$, then:
 
-$$
+```math
 L^2=(I_n-S)^2=I_n-2S+S^2.
-$$
+```
 
 The term $I_n\mathbf{x}$ is 0-hop self-information, $S\mathbf{x}$ is one-hop normalized neighbor mixing, and $S^2\mathbf{x}$ contains information up to two hops. Thus, $L^2\mathbf{x}$ is not pure 2-hop information. The more precise statement is that $L^k\mathbf{x}$ contains information up to $k$ hops.
 
 The Chebyshev filter uses:
 
-$$
+```math
 g_\theta(L)\mathbf{x} = \sum_{k=0}^{K-1}\theta_kT_k(\tilde L)\mathbf{x}.
-$$
+```
 
 Here, $\theta_k$ is no longer directly the weight of the $k$-th monomial term $L^k\mathbf{x}$. Instead, it is the coefficient of the $k$-th Chebyshev basis function in the learned spectral filter response.
 
 For example:
 
-$$
+```math
 T_2(\tilde L)=2\tilde L^2-I_n.
-$$
+```
 
 Since $\tilde L=aL-I_n$ with $a=2/\lambda_{\max}$:
 
-$$
+```math
 \tilde L^2=(aL-I_n)^2=a^2L^2-2aL+I_n.
-$$
+```
 
 Therefore:
 
-$$
+```math
 T_2(\tilde L)=2a^2L^2-4aL+I_n.
-$$
+```
 
 So $T_2(\tilde L)\mathbf{x}$ already mixes:
 
-$$
+```math
 I_n\mathbf{x},\quad L\mathbf{x},\quad L^2\mathbf{x}.
-$$
+```
 
 Therefore, Chebyshev coefficients are less directly interpretable as hop-specific weights. The correct interpretation is:
 
@@ -2105,61 +2105,61 @@ Chebyshev recurrence simplifies the computational path in two ways.
 
 First, it avoids explicit multiplication by the graph Fourier basis. The direct spectral filtering form is:
 
-$$
+```math
 \mathbf{y}=Ug_\theta(\Lambda)U^T\mathbf{x}.
-$$
+```
 
 This requires the dense eigenvector matrix $U$. Multiplication by $U$ or $U^T$ is generally expensive, and computing or storing the eigendecomposition is also costly.
 
 By using Chebyshev polynomials, the filter can be written directly in the node domain:
 
-$$
+```math
 \mathbf{y} = \sum_{k=0}^{K-1} \theta_kT_k(\tilde L)\mathbf{x}.
-$$
+```
 
 This avoids explicit graph Fourier transform and inverse graph Fourier transform during filtering.
 
 Second, it avoids explicit construction of high-order matrices such as:
 
-$$
+```math
 L^2,\ L^3,\ldots,L^k
-$$
+```
 
 or:
 
-$$
+```math
 T_k(\tilde L).
-$$
+```
 
 Instead, it recursively computes the vectors:
 
-$$
+```math
 \bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}.
-$$
+```
 
 The recurrence is:
 
-$$
+```math
 \bar{\mathbf{x}}_0=\mathbf{x},
-$$
+```
 
-$$
+```math
 \bar{\mathbf{x}}_1=\tilde L\mathbf{x},
-$$
+```
 
 and for $k\ge 2$:
 
-$$
+```math
 \bar{\mathbf{x}}_k = 2\tilde L\bar{\mathbf{x}}_{k-1} - \bar{\mathbf{x}}_{k-2}.
-$$
+```
 
 Each step only requires a sparse matrix-vector multiplication with $\tilde L$.
 
 Therefore, the main simplification is not simply a space-for-speed tradeoff. The recurrence reduces both computational and storage burden by avoiding dense Fourier-basis operations and explicit high-order matrix construction. The total recurrence cost is:
 
-$$
+```math
 O(K\lvert E\rvert),
-$$
+```
 
 because each recurrence step uses the sparse graph structure. The final weighted combination over the $K$ vectors costs $O(Kn)$.
 
@@ -2167,77 +2167,77 @@ because each recurrence step uses the sparse graph structure. The final weighted
 
 The Chebyshev recurrence is not arbitrary. It comes from the definition of Chebyshev polynomials:
 
-$$
+```math
 T_k(\cos\alpha)=\cos(k\alpha).
-$$
+```
 
 The trigonometric product-to-sum identity gives:
 
-$$
+```math
 2\cos\alpha\cos((k-1)\alpha) = \cos(k\alpha)+\cos((k-2)\alpha).
-$$
+```
 
 Rearranging:
 
-$$
+```math
 \cos(k\alpha) = 2\cos\alpha\cos((k-1)\alpha) - \cos((k-2)\alpha).
-$$
+```
 
 Now set:
 
-$$
+```math
 z=\cos\alpha.
-$$
+```
 
 Using the defining relationship again:
 
-$$
+```math
 T_k(z)=\cos(k\alpha),
-$$
+```
 
-$$
+```math
 T_{k-1}(z)=\cos((k-1)\alpha),
-$$
+```
 
 and:
 
-$$
+```math
 T_{k-2}(z)=\cos((k-2)\alpha).
-$$
+```
 
 Substituting these into the trigonometric identity gives:
 
-$$
+```math
 T_k(z) = 2zT_{k-1}(z)-T_{k-2}(z).
-$$
+```
 
 After replacing $z$ by $\tilde L$, the same recurrence becomes a recurrence over graph-filtered signals:
 
-$$
+```math
 \bar{\mathbf{x}}_k = 2\tilde L\bar{\mathbf{x}}_{k-1} - \bar{\mathbf{x}}_{k-2}.
-$$
+```
 
 The constants $2$ and $-1$ in the recurrence are not learned graph weights and not hop-specific coefficients. They are fixed coefficients inherited from the Chebyshev polynomial basis. The learnable coefficients are $\theta_k$ in the filter expansion.
 
 In the frequency domain, the filter response is:
 
-$$
+```math
 g_\theta(\tilde \lambda) = \sum_{k=0}^{K-1}\theta_kT_k(\tilde \lambda).
-$$
+```
 
 Thus, $\theta_k$ measures how much the $k$-th Chebyshev basis function contributes to the learned frequency response. It is a coordinate of the filter response function in the Chebyshev polynomial basis, not a coordinate of the input signal itself and not a pure $k$-hop weight.
 
 In the node domain, the corresponding basis feature is:
 
-$$
+```math
 \bar{\mathbf{x}}_k=T_k(\tilde L)\mathbf{x}.
-$$
+```
 
 The final filtered signal is:
 
-$$
+```math
 \mathbf{y} = \sum_{k=0}^{K-1} \theta_k\bar{\mathbf{x}}_k.
-$$
+```
 
 Therefore, the model first generates Chebyshev-basis graph-local features, then learns how to combine them.
 
