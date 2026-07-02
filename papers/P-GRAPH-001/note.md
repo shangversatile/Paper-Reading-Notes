@@ -14,6 +14,41 @@ Tier 0, Tier 1
 
 Spatiotemporal modeling
 
+## Template Alignment Map
+
+This note was developed through an extended research-reading process before the full 18-section note template was standardized. Existing sections are preserved when they already express the required content clearly. The map below records how the current note corresponds to the standard template.
+
+| Template Section | Current Note Location | Status |
+| --- | --- | --- |
+| 1. Citation | Paper metadata / reading status | Covered |
+| 2. Reading Tier and Track | Paper metadata / research context | Covered |
+| 3. Core Problem | Core problem / why graph CNN is needed | Covered |
+| 4. Intuition Before the Math | Laplacian, Fourier, filtering intuition sections | Covered |
+| 5. Mathematical or Algorithmic Setup | Graph Laplacian, graph Fourier transform, spectral filtering, Chebyshev sections | Covered |
+| 6. Method: Step-by-Step Logic | Polynomial filters, Chebyshev recurrence, multi-feature graph convolution | Covered |
+| 7. Key Equations and Derivations | Laplacian energy, spectral filtering, polynomial filters, Chebyshev recurrence | Covered |
+| 8. Assumptions | Graph quality, locality, stationarity, PM2.5 graph validity discussions | Covered |
+| 9. Experimental Evidence | Experiments and Graph Quality | Covered |
+| 10. Limitations | Final summary / limitations / PM2.5 critique | Covered |
+| 11. Research-Level Critique | Reliability critique and PM2.5 graph construction validation | Covered |
+| 12. Connection to My Active Project | PM2.5 graph construction and reliability validation | Covered |
+| 13. Transferable Intuitions | Key takeaways and final paper-level summary | Covered |
+| 14. Implementation Implications | PM2.5 validation protocol and implementation-oriented critique | Partial |
+| 15. Possible Research Questions | Reliability questions and PM2.5 transfer hypotheses | Partial |
+| 16. What I Should Be Able to Explain After Reading | Add below if missing | Needs explicit checklist |
+| 17. Follow-Up Actions | Add below if missing | Needs explicit actions |
+| 18. Completion Criteria | Reading Status / completion note | Covered |
+
+## Understanding Checklist
+
+* Explain why non-parametric spectral filters are not localized.
+* Explain how polynomial filters produce K-hop locality.
+* Explain why Chebyshev recurrence avoids explicit eigendecomposition during filtering.
+* Explain how multi-feature graph convolution mixes input and output channels.
+* Explain why graph coarsening is preprocessing rather than learned hierarchy in the original paper.
+* Explain why graph quality is a reliability bottleneck.
+* Explain how this paper motivates graph construction validation for PM2.5 forecasting.
+
 ## Why This Paper Matters
 
 This paper is a foundation for understanding graph convolution before treating STGCN as a black-box forecasting baseline. It explains how convolution can be defined on an irregular graph by moving from the vertex domain to the spectral domain of the graph Laplacian, then makes that construction practical through localized polynomial filters.
@@ -2849,8 +2884,9 @@ Next step: Connect P-GRAPH-001 to STGCN / DCRNN / Graph WaveNet / reliable spati
 
 ## Follow-Up Actions
 
-1. Use this note as the foundation for reading P-GRAPH-002 and STGCN.
-2. Map the STGCN graph convolution module back to Chebyshev polynomial filtering.
-3. Document graph construction choices before implementing the PM2.5 baseline.
-4. Add graph construction comparison to the post-MVP reliability stress-test backlog.
-5. Track whether graph mismatch affects calibration, coverage, and decision-cost metrics.
+| Action | Target File or Project Component | Status |
+| --- | --- | --- |
+| Read P-ST-001 / STGCN | papers/P-ST-001/note.md | Planned |
+| Read P-ST-002 / DCRNN | papers/P-ST-002/note.md | Planned |
+| Compare ChebNet, STGCN, and DCRNN | spatiotemporal reading queue / future comparison note | Planned |
+| Use graph quality critique to design PM2.5 graph validation experiments | reliable forecasting project plan | Planned |

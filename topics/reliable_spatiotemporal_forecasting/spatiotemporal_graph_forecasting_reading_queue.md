@@ -13,6 +13,8 @@
 2. P-ST-002 / DCRNN
    Role: directed diffusion, recurrent temporal modeling, and multi-step forecasting baseline; Rose Yu related.
 
+STGCN is read first because it is a direct continuation from ChebNet to spatiotemporal convolution. DCRNN is read next to introduce directed diffusion and recurrent multi-step forecasting.
+
 ## Core Next Models
 
 1. P-ST-003 / PM2.5-GNN

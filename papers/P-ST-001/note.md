@@ -1,149 +1,184 @@
 # P-ST-001: STGCN - Spatio-Temporal Graph Convolutional Networks
 
-## Reading Status
+## 1. Citation
 
-Status: Ready for first-pass research reading
-Priority: Very high
-Role: Core convolutional spatiotemporal forecasting baseline
-Planned output: Vanilla STGCN relearning and independent implementation specification
-Project relevance: deterministic baseline for reliable PM2.5 forecasting
-Relation to P-GRAPH-001: direct extension from Chebyshev graph convolution to spatiotemporal forecasting
+**Paper:** Spatio-Temporal Graph Convolutional Networks: A Deep Learning Framework for Traffic Forecasting
+**Authors:** Bing Yu, Haoteng Yin, Zhanxing Zhu
+**Year:** 2018
+**Venue:** IJCAI
+**Primary Source:** https://www.ijcai.org/proceedings/2018/505
+**Verified On:** TBD
+**Reading Status:** Ready for first-pass research reading
 
-## Paper Metadata
+## 2. Reading Tier and Track
 
-* ID: P-ST-001
-* Title: Spatio-Temporal Graph Convolutional Networks: A Deep Learning Framework for Traffic Forecasting
-* Authors: Bing Yu, Haoteng Yin, Zhanxing Zhu
-* Venue / year: IJCAI 2018
-* Topic: spatiotemporal-modeling
-* Tier: Tier 1
-* Task: traffic forecasting
-* Core idea: combine graph convolution with gated temporal convolution in a fully convolutional spatiotemporal architecture
-* Link: https://www.ijcai.org/proceedings/2018/505
-* PDF downloaded: Yes
+**Reading Tier:** Tier 1
+**Track:** spatiotemporal-modeling
+**Related Project:** Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift
+**Optional Research Context:** General methodological foundation for deterministic spatiotemporal forecasting baseline
 
-## Why This Paper Comes After P-GRAPH-001
+### Why This Paper Is in the Curriculum
 
-P-GRAPH-001 explains how Chebyshev polynomial filters make graph convolution localized, parameter-efficient, and scalable.
+STGCN is included because it is a canonical convolutional spatiotemporal graph forecasting baseline. It connects graph convolution to temporal convolution and provides a vanilla deterministic baseline before uncertainty quantification, conformal calibration, and graph reliability stress tests.
 
-STGCN is a natural next step because it uses graph convolution inside a temporal forecasting architecture.
+## 3. Core Problem
 
-The transition is:
+This paper addresses traffic forecasting on graph-structured sensor networks, where the model must capture both spatial dependency across sensors and temporal dependency over historical observations.
+
+Current reading goal: identify how STGCN combines graph convolution and temporal convolution, and what assumptions this introduces for PM2.5 forecasting.
+
+## 4. Intuition Before the Math
+
+P-GRAPH-001 explains how to filter a signal over a graph. STGCN asks how to use such graph filtering repeatedly over time. The simplest mental model is:
 
 ```text
-ChebNet:
-    graph convolution on static graph signals
-    Chebyshev polynomial filtering
-    no temporal forecasting module
-
-STGCN:
-    graph convolution for spatial dependency
-    temporal convolution for sequence dependency
-    fully convolutional spatiotemporal blocks
-    traffic forecasting baseline
+historical sensor sequence
+→ temporal feature extraction
+→ graph-based spatial mixing
+→ temporal feature extraction
+→ future prediction
 ```
 
-For PM2.5, STGCN is useful as a deterministic baseline before adding uncertainty quantification, conformal calibration, graph perturbation tests, and decision-aware evaluation.
+## 5. Mathematical or Algorithmic Setup
 
-## Core Reading Questions
+| Object | Formal Role | Intuition |
+| --- | --- | --- |
+| Graph `G` | Sensor network structure | Defines which sensors can exchange spatial information |
+| Adjacency `W` | Edge-weight matrix | Encodes spatial dependency assumption |
+| Laplacian or graph operator | Graph convolution operator | Defines how graph convolution propagates information |
+| Historical window | Input time context | Controls what past observations are visible |
+| ST-Conv block | Main model block | Combines temporal and spatial processing |
+| Forecast horizon | Prediction target range | Defines single-step or multi-step forecasting demand |
 
-1. What graph convolution does STGCN use?
-2. How does STGCN connect Chebyshev graph convolution with temporal forecasting?
-3. What is the ST-Conv block?
-4. How does gated temporal convolution work?
-5. Why does STGCN avoid recurrent units?
-6. How does STGCN handle multi-step prediction?
-7. What graph construction assumptions does STGCN inherit?
-8. Does STGCN support directed or dynamic graphs?
-9. How should STGCN be reproduced as a vanilla baseline?
-10. What reliability gaps remain for PM2.5 forecasting?
+## 6. Method: Step-by-Step Logic
 
-## Mathematical Objects to Extract During Reading
+Initial scaffold to be refined after full reading:
 
-Do not fill these until the paper is read carefully.
+1. Represent traffic sensors as graph nodes.
+2. Use historical sensor observations as graph signals over time.
+3. Apply temporal convolution to capture short-term dynamics.
+4. Apply graph convolution to capture spatial dependency.
+5. Stack spatiotemporal blocks.
+6. Produce future traffic predictions.
+7. Evaluate against deterministic forecasting baselines.
 
-### Graph convolution module
+## 7. Key Equations and Derivations
 
-To be filled after reading.
+Do not fabricate equations before reading.
 
-### Temporal gated convolution
+| Equation | Meaning | Why It Matters | Implementation or Research Implication |
+| --- | --- | --- | --- |
+| ST-Conv block equation | TBD after reading | Defines core architecture | Needed for vanilla implementation |
+| Graph convolution equation | TBD after reading | Defines spatial dependency modeling | Needed to compare with ChebNet and DCRNN |
+| Temporal gated convolution equation | TBD after reading | Defines temporal feature extraction | Needed to reproduce baseline |
 
-To be filled after reading.
+## 8. Assumptions
 
-### ST-Conv block
+### Data Assumptions
 
-To be filled after reading.
+* Sensor graph is meaningful.
+* Historical traffic patterns contain predictive temporal structure.
 
-### Forecasting objective
+### Model Assumptions
 
-To be filled after reading.
+* Spatial dependency can be represented by a fixed graph.
+* Temporal convolution is sufficient for the forecast horizon.
+* Local graph filtering captures useful spatial interactions.
 
-## Reliability Critique Template
+### Optimization or Computation Assumptions
 
-During reading, evaluate:
+* Fully convolutional training is more parallelizable than recurrent training.
+* Model can be trained as deterministic point forecaster.
 
-* static graph assumption;
-* whether the graph encodes valid locality;
-* temporal convolution receptive field;
-* robustness under graph mismatch;
-* robustness under missing sensors;
-* robustness under noise and spike anomalies;
-* calibration and uncertainty gap;
-* station-level prediction suitability;
-* comparison against DCRNN;
-* PM2.5 transfer limitations.
+### Evaluation Assumptions
 
-## PM2.5 Transfer Focus
+* Standard forecasting metrics are sufficient for baseline comparison.
+* Reliability, calibration, and distribution shift are not primary evaluation targets in the original deterministic baseline.
 
-* static graph validity;
-* station-level forecasting;
-* robustness under missingness and graph perturbation;
-* baseline before UQ and conformal calibration.
-## PM2.5 Transfer Hypotheses
+For PM2.5, these assumptions may fail under wind-driven dynamic transport, missing stations, seasonal shift, sensor noise, and extreme pollution events.
 
-1. STGCN may be easier to train and reproduce than recurrent architectures.
-2. Temporal convolution may be more parallelizable and stable than recurrent forecasting.
-3. Static graph convolution may be insufficient for wind-driven dynamic PM2.5 transport.
-4. STGCN is a good deterministic baseline before adding UQ and conformal calibration.
-5. Reliability evaluation should compare STGCN with DCRNN under noise, missingness, temporal shift, and graph perturbation.
-6. Vanilla STGCN should be implemented before adding adaptive graphs or uncertainty modules.
+## 9. Experimental Evidence
 
-## Independent Implementation Specification Placeholder
+| Experiment | Dataset / Setting | What It Tests | Main Evidence | Limitation |
+| --- | --- | --- | --- | --- |
+| Traffic forecasting benchmark | TBD after reading | Deterministic forecasting accuracy | TBD | Need reliability and shift evaluation |
+| Baseline comparison | TBD after reading | STGCN vs prior models | TBD | May not test graph perturbation or calibration |
 
-The planned output is a vanilla STGCN relearning and independent implementation specification.
+## 10. Limitations
 
-To be filled after reading:
+Current known issues to verify:
 
-* required inputs;
-* graph construction;
-* temporal window;
-* model blocks;
-* training objective;
-* evaluation metrics;
-* reliability stress tests;
-* PM2.5 adaptation plan.
+* likely fixed graph assumption;
+* deterministic point prediction;
+* limited uncertainty analysis;
+* limited distribution-shift evaluation;
+* unclear suitability for directed dynamic environmental transport;
+* PM2.5 adaptation requires graph construction validation.
 
-## Connection to Future Papers
+## 11. Research-Level Critique
 
-After STGCN, compare with:
+Questions to answer during reading:
 
-* P-ST-002 / DCRNN: directed diffusion and recurrent multi-step prediction;
-* Graph WaveNet: adaptive adjacency and dilated temporal convolution;
-* AGCRN: node-adaptive parameters and data-adaptive graph generation;
-* MTGNN: learned directed graph for multivariate time series;
-* Quantifying Uncertainty in Deep Spatiotemporal Forecasting: UQ methods;
-* CPTC: conformal prediction under change points.
+* Is STGCN strong because of graph convolution, temporal convolution, or both?
+* How sensitive is it to graph construction?
+* Does temporal convolution handle long-horizon error accumulation?
+* Would dynamic graph construction improve PM2.5 forecasting?
+* How should STGCN be stress-tested under missingness and graph perturbation?
 
-## First-Pass Reading Checklist
+## 12. Connection to My Active Project
 
-* [ ] Read abstract and introduction.
-* [ ] Extract model architecture.
-* [ ] Understand graph convolution module.
-* [ ] Understand temporal gated convolution.
-* [ ] Understand ST-Conv block.
-* [ ] Compare with P-GRAPH-001 / ChebNet.
-* [ ] Compare with DCRNN after reading P-ST-002.
-* [ ] Summarize experiments and baselines.
-* [ ] Identify graph assumptions.
-* [ ] Write PM2.5 reliability transfer.
-* [ ] Draft vanilla STGCN implementation specification.
+STGCN connects to the active project as:
+
+* deterministic forecasting backbone;
+* vanilla baseline before UQ;
+* graph construction stress test;
+* station-level PM2.5 prediction;
+* distribution shift evaluation.
+
+## 13. Transferable Intuitions
+
+1. Spatiotemporal forecasting requires separating spatial and temporal inductive biases.
+2. A deterministic backbone must be reliable before adding UQ.
+3. Fixed graph quality is a hidden validity condition.
+
+## 14. Implementation Implications
+
+| Component | Implication | Required Check |
+| --- | --- | --- |
+| Data loader | Must produce sensor-by-time windows | Verify shape and horizon |
+| Graph builder | Must define fixed adjacency | Compare distance/correlation/domain graph |
+| Model | Implement vanilla STGCN first | No UQ before baseline is stable |
+| Metrics | Start with MAE/RMSE, then add reliability metrics | Separate point accuracy from calibration |
+| Stress test | Add missingness/noise/graph perturbation | Evaluate robustness before claims |
+| Experiment logging | Log graph type and forecast horizon | Reproducibility check |
+
+## 15. Possible Research Questions
+
+| Question | Why It Matters | Minimal Test or Evidence Needed | Related Project Component |
+| --- | --- | --- | --- |
+| How sensitive is STGCN to graph construction in PM2.5 forecasting? | Graph validity is central to reliability | Compare distance, correlation, PM2.5 domain graph, shuffled graph | Graph construction |
+| Does STGCN degrade gracefully under missing stations? | Deployment data are incomplete | Sensor masking stress test | Missingness robustness |
+| Does STGCN preserve high-risk station ranking? | Decision reliability matters | Top-K risk ranking evaluation | Risk-aware decision |
+
+## 16. What I Should Be Able to Explain After Reading
+
+* What problem STGCN solves.
+* How STGCN differs from ChebNet.
+* What an ST-Conv block does.
+* Why temporal convolution is used instead of recurrence.
+* What assumptions STGCN makes about graph structure.
+* How STGCN should be adapted to PM2.5.
+* What reliability tests are missing in the original paper.
+
+## 17. Follow-Up Actions
+
+| Action | Target File or Project Component | Status |
+| --- | --- | --- |
+| Complete first-pass reading | papers/P-ST-001/note.md | Planned |
+| Extract core equations | Section 7 | Planned |
+| Draft vanilla implementation specification | Reliable-AI-Research-Lab future task only, not this commit | Planned |
+| Compare with DCRNN | papers/P-ST-002/note.md | Planned |
+
+## 18. Completion Criteria
+
+Keep the paper as Ready for first-pass research reading until all core sections are filled. Mark Completed only after assumptions, equations, experiments, limitations, project connection, research questions, and implementation implications are filled.

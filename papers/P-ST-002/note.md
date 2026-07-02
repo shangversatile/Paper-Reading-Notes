@@ -1,157 +1,187 @@
 # P-ST-002: DCRNN - Diffusion Convolutional Recurrent Neural Network
 
-## Reading Status
+## 1. Citation
 
-Status: Ready for first-pass research reading
-Priority: Very high
-Role: Directed diffusion, recurrent temporal modeling, and multi-step forecasting baseline
-Planned output: DCRNN relearning and independent implementation specification
-Advisor relevance: Rose Yu related
-Project relevance: directed propagation and PM2.5 dynamic graph transfer
-Relation to P-GRAPH-001: shifts from undirected spectral-local filtering to directed diffusion forecasting
-Relation to P-ST-001: recurrent directed-diffusion counterpart to STGCN's convolutional temporal modeling
+**Paper:** Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting
+**Authors:** Yaguang Li, Rose Yu, Cyrus Shahabi, Yan Liu
+**Year:** 2018
+**Venue:** ICLR
+**Primary Source:** https://openreview.net/forum?id=SJiHXGWAZ
+**Verified On:** TBD
+**Reading Status:** Ready for first-pass research reading
 
-## Paper Metadata
+## 2. Reading Tier and Track
 
-* ID: P-ST-002
-* Title: Diffusion Convolutional Recurrent Neural Network: Data-Driven Traffic Forecasting
-* Authors: Yaguang Li, Rose Yu, Cyrus Shahabi, Yan Liu
-* Venue / year: ICLR 2018
-* Topic: spatiotemporal-modeling
-* Tier: Tier 1, Tier 3
-* Task: traffic forecasting on road networks
-* Core idea: model traffic flow as a diffusion process on a directed graph and combine diffusion convolution with recurrent sequence modeling
-* Link: https://openreview.net/forum?id=SJiHXGWAZ
-* PDF downloaded: Yes
+**Reading Tier:** Tier 1, Tier 3
+**Track:** spatiotemporal-modeling
+**Related Project:** Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift
+**Optional Research Context:** Rose Yu related; directed diffusion and multi-step forecasting baseline
 
-## Why This Paper Comes After STGCN and P-GRAPH-001
+### Why This Paper Is in the Curriculum
 
-P-GRAPH-001 provides the graph convolution foundation.
+DCRNN is included because it is a canonical directed-diffusion spatiotemporal forecasting model and a Rose Yu related paper. It complements STGCN by using random-walk diffusion and recurrent encoder-decoder forecasting.
 
-P-ST-001 / STGCN shows how graph convolution can be combined with temporal convolution.
+## 3. Core Problem
 
-DCRNN introduces a different spatiotemporal modeling path:
+This paper addresses traffic forecasting on directed road networks, where information propagation is not necessarily symmetric and future predictions require temporal sequence modeling.
+
+Current reading goal: understand diffusion convolution, recurrent forecasting, encoder-decoder prediction, and scheduled sampling, then evaluate transfer to PM2.5 dynamic graph forecasting.
+
+## 4. Intuition Before the Math
+
+ChebNet models graph-local filtering on a mostly undirected graph. STGCN adds temporal convolution. DCRNN instead treats spatial dependency as a diffusion process over a directed graph.
+
+Mental model:
 
 ```text
-STGCN:
-    graph convolution
-    temporal convolution
-    fully convolutional sequence modeling
-
-DCRNN:
-    directed diffusion convolution
-    recurrent temporal modeling
-    encoder-decoder multi-step forecasting
-    scheduled sampling
+historical sensor sequence
+→ directed random-walk diffusion over graph
+→ recurrent hidden-state update
+→ encoder-decoder multi-step prediction
 ```
 
-For PM2.5, DCRNN is important because pollution transport may be directional, dynamic, and affected by wind-driven diffusion-like propagation.
+## 5. Mathematical or Algorithmic Setup
 
-## Core Reading Questions
+| Object | Formal Role | Intuition |
+| --- | --- | --- |
+| Directed graph `G` | Road sensor graph | Defines asymmetric propagation paths |
+| Transition matrix | Random-walk operator | Describes how information diffuses through directed edges |
+| Diffusion convolution | Spatial dependency module | Mixes information through multi-step random walks |
+| Recurrent unit | Temporal state update | Tracks evolving traffic dynamics |
+| Encoder-decoder | Multi-step forecasting architecture | Maps history to future sequence |
+| Scheduled sampling | Training strategy | Reduces train-test mismatch in autoregressive prediction |
 
-1. How does diffusion convolution differ from Chebyshev graph convolution?
-2. Why does DCRNN use random walk transition matrices instead of only symmetric graph Laplacians?
-3. What does bidirectional diffusion mean?
-4. How does DCRNN combine graph diffusion with recurrent units?
-5. Why does multi-step forecasting require encoder-decoder modeling?
-6. What problem does scheduled sampling solve?
-7. What graph construction assumptions remain in DCRNN?
-8. How can wind-driven PM2.5 transport be represented as directed diffusion?
-9. What uncertainty, calibration, and distribution-shift problems are not solved by DCRNN?
-10. How should DCRNN be used as a reliable PM2.5 forecasting baseline?
+## 6. Method: Step-by-Step Logic
 
-## Mathematical Objects to Extract During Reading
+1. Represent road sensors as nodes in a directed graph.
+2. Encode spatial dependency through diffusion over graph edges.
+3. Use diffusion convolution inside a recurrent forecasting model.
+4. Encode historical observations into hidden states.
+5. Decode future multi-step predictions.
+6. Use scheduled sampling to reduce exposure bias.
+7. Evaluate deterministic multi-step traffic forecasting.
 
-Do not fill these until the paper is read carefully.
+## 7. Key Equations and Derivations
 
-### Directed graph and random walk matrix
+Do not fabricate exact equations before reading.
 
-To be filled after reading.
+| Equation | Meaning | Why It Matters | Implementation or Research Implication |
+| --- | --- | --- | --- |
+| Random-walk transition matrix | TBD after reading | Defines directed diffusion | Needed for graph construction |
+| Diffusion convolution | TBD after reading | Core spatial operator | Needed for DCRNN implementation |
+| Recurrent update | TBD after reading | Combines graph diffusion and temporal state | Needed for model reproduction |
+| Encoder-decoder objective | TBD after reading | Defines multi-step prediction | Needed for training setup |
+| Scheduled sampling rule | TBD after reading | Handles train-test mismatch | Needed for long-horizon forecasting |
 
-### Diffusion convolution
+## 8. Assumptions
 
-To be filled after reading.
+### Data Assumptions
 
-### Recurrent update
+* Sensor graph direction is meaningful.
+* Historical sequence contains predictive temporal dependency.
+* Road-network diffusion is a useful approximation.
 
-To be filled after reading.
+### Model Assumptions
 
-### Encoder-decoder forecasting
+* Spatial propagation can be represented by random-walk diffusion.
+* Recurrent hidden states can capture temporal dynamics.
+* Multi-step forecasting can be learned through encoder-decoder training.
 
-To be filled after reading.
+### Optimization or Computation Assumptions
 
-### Scheduled sampling
+* Scheduled sampling improves multi-step forecasting stability.
+* Training is feasible despite recurrence.
 
-To be filled after reading.
+### Evaluation Assumptions
 
-## Reliability Critique Template
+* Deterministic traffic metrics capture forecasting quality.
+* Original setup may not directly evaluate uncertainty, calibration, or dynamic distribution shift.
 
-During reading, evaluate:
+For PM2.5, directed diffusion must be tied to wind, meteorology, terrain, or physical transport assumptions rather than copied from road networks.
 
-* graph construction validity;
-* directed propagation assumption;
-* temporal stationarity assumption;
-* long-horizon error accumulation;
-* robustness under missing sensors;
-* robustness under graph perturbation;
-* calibration and uncertainty gap;
-* PM2.5 transfer limitations;
-* comparison against STGCN.
+## 9. Experimental Evidence
 
-## PM2.5 Transfer Focus
+| Experiment | Dataset / Setting | What It Tests | Main Evidence | Limitation |
+| --- | --- | --- | --- | --- |
+| Traffic forecasting benchmark | TBD after reading | Multi-step deterministic forecasting | TBD | Need shift and calibration evaluation |
+| Baseline comparison | TBD after reading | DCRNN vs prior approaches | TBD | May not validate physical graph transfer |
 
-* wind-informed directed graph;
-* static vs dynamic diffusion;
-* long-horizon error accumulation;
-* deterministic backbone before UQ and conformal calibration.
-## PM2.5 Transfer Hypotheses
+## 10. Limitations
 
-1. A directed wind-informed graph may be more physically meaningful than a symmetric distance graph.
-2. Bidirectional diffusion may capture both upstream and downstream relations, but physical interpretation must be checked.
-3. Static road-network diffusion may not directly transfer to dynamic air pollution transport.
-4. DCRNN can serve as a strong deterministic backbone, but requires UQ or conformal calibration for reliability.
-5. PM2.5 graph construction should compare distance, correlation, wind-informed, hybrid, and learned graphs.
-6. Long-horizon PM2.5 forecasting requires evaluating error accumulation and calibration degradation.
+Current known issues to verify:
 
-## Independent Implementation Specification Placeholder
+* deterministic point prediction;
+* no direct uncertainty quantification;
+* graph construction remains a strong assumption;
+* road-network diffusion may not transfer directly to air pollution;
+* dynamic meteorology may require time-varying graph;
+* calibration and decision reliability are not central.
 
-The planned output is a DCRNN relearning and independent implementation specification.
+## 11. Research-Level Critique
 
-To be filled after reading:
+Questions to answer during reading:
 
-* required inputs;
+* Is diffusion convolution more appropriate than Laplacian graph convolution for PM2.5?
+* What does bidirectional diffusion mean physically in environmental systems?
+* Does recurrent forecasting improve or worsen long-horizon calibration?
+* How sensitive is DCRNN to graph direction errors?
+* How should scheduled sampling be evaluated under shift?
+
+## 12. Connection to My Active Project
+
+DCRNN connects to the active project as:
+
 * directed graph construction;
-* random walk matrices;
-* diffusion convolution;
-* recurrent cell;
-* encoder-decoder setting;
-* scheduled sampling setting;
-* training objective;
-* evaluation metrics;
-* reliability stress tests;
-* PM2.5 adaptation plan.
+* wind-informed diffusion;
+* multi-step PM2.5 forecasting;
+* deterministic backbone before UQ;
+* graph perturbation stress test;
+* long-horizon risk-aware prediction.
 
-## Connection to Future Papers
+## 13. Transferable Intuitions
 
-After DCRNN, compare with:
+1. Directionality matters when propagation is asymmetric.
+2. A forecasting model inherits all assumptions encoded in the transition matrix.
+3. Long-horizon forecasting requires explicit attention to train-test mismatch and error accumulation.
 
-* P-ST-001 / STGCN: convolutional temporal modeling instead of recurrent modeling;
-* Graph WaveNet: adaptive adjacency and dilated temporal convolution;
-* AGCRN: node-adaptive parameters and data-adaptive graph generation;
-* Quantifying Uncertainty in Deep Spatiotemporal Forecasting: UQ wrapper and evaluation;
-* CPTC: conformal prediction under time-series change points.
+## 14. Implementation Implications
 
-## First-Pass Reading Checklist
+| Component | Implication | Required Check |
+| --- | --- | --- |
+| Graph builder | Must support directed adjacency | Check wind/distance/correlation graph variants |
+| Data loader | Must produce encoder and decoder windows | Verify horizon alignment |
+| Model | Implement vanilla DCRNN before modifications | Compare with STGCN baseline |
+| Metrics | Evaluate horizon-wise error | Track degradation over horizon |
+| Stress test | Perturb graph direction and missing sensors | Test robustness |
+| Experiment logging | Log graph direction, diffusion steps, horizon | Reproducibility check |
 
-* [ ] Read abstract and introduction.
-* [ ] Extract problem setting.
-* [ ] Derive diffusion convolution.
-* [ ] Compare diffusion convolution with ChebNet.
-* [ ] Compare DCRNN with STGCN.
-* [ ] Understand recurrent unit design.
-* [ ] Understand encoder-decoder structure.
-* [ ] Understand scheduled sampling.
-* [ ] Summarize experiments and baselines.
-* [ ] Identify assumptions.
-* [ ] Write PM2.5 reliability transfer.
-* [ ] Draft DCRNN implementation specification.
+## 15. Possible Research Questions
+
+| Question | Why It Matters | Minimal Test or Evidence Needed | Related Project Component |
+| --- | --- | --- | --- |
+| Does wind-informed directed diffusion improve PM2.5 forecasting over symmetric distance graphs? | PM2.5 transport is directional | Compare directed wind graph vs symmetric graph | Graph construction |
+| Does DCRNN maintain calibration over long horizons after UQ or conformal wrapping? | Long-horizon error accumulation matters | Horizon-wise coverage evaluation | Calibration |
+| How sensitive is DCRNN to direction errors in the graph? | Wrong direction can imply wrong propagation | Reverse or shuffle directed edges | Robustness |
+
+## 16. What I Should Be Able to Explain After Reading
+
+* What diffusion convolution is.
+* How DCRNN differs from ChebNet and STGCN.
+* Why directed random walks are used.
+* How recurrent units interact with graph diffusion.
+* Why scheduled sampling is used.
+* What assumptions remain in graph construction.
+* How DCRNN could transfer to PM2.5 forecasting.
+
+## 17. Follow-Up Actions
+
+| Action | Target File or Project Component | Status |
+| --- | --- | --- |
+| Complete first-pass reading | papers/P-ST-002/note.md | Planned |
+| Extract diffusion convolution equations | Section 7 | Planned |
+| Compare with STGCN | papers/P-ST-001/note.md | Planned |
+| Draft DCRNN implementation specification | Reliable-AI-Research-Lab future task only, not this commit | Planned |
+
+## 18. Completion Criteria
+
+Keep the paper as Ready for first-pass research reading until all core sections are filled. Mark Completed only after assumptions, equations, experiments, limitations, project connection, research questions, and implementation implications are filled.
