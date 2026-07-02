@@ -6,7 +6,7 @@ Status: Ready for first-pass research reading
 Priority: Very high
 Role: Core convolutional spatiotemporal forecasting baseline
 Planned output: Vanilla STGCN relearning and independent implementation specification
-Project relevance: graph convolution plus temporal convolution baseline for reliable PM2.5 forecasting
+Project relevance: deterministic baseline for reliable PM2.5 forecasting
 Relation to P-GRAPH-001: direct extension from Chebyshev graph convolution to spatiotemporal forecasting
 
 ## Paper Metadata
@@ -93,6 +93,12 @@ During reading, evaluate:
 * comparison against DCRNN;
 * PM2.5 transfer limitations.
 
+## PM2.5 Transfer Focus
+
+* static graph validity;
+* station-level forecasting;
+* robustness under missingness and graph perturbation;
+* baseline before UQ and conformal calibration.
 ## PM2.5 Transfer Hypotheses
 
 1. STGCN may be easier to train and reproduce than recurrent architectures.

@@ -7,7 +7,7 @@ Priority: Very high
 Role: Directed diffusion, recurrent temporal modeling, and multi-step forecasting baseline
 Planned output: DCRNN relearning and independent implementation specification
 Advisor relevance: Rose Yu related
-Project relevance: directed propagation, recurrent temporal dynamics, multi-step forecasting, PM2.5 dynamic graph transfer
+Project relevance: directed propagation and PM2.5 dynamic graph transfer
 Relation to P-GRAPH-001: shifts from undirected spectral-local filtering to directed diffusion forecasting
 Relation to P-ST-001: recurrent directed-diffusion counterpart to STGCN's convolutional temporal modeling
 
@@ -98,6 +98,12 @@ During reading, evaluate:
 * PM2.5 transfer limitations;
 * comparison against STGCN.
 
+## PM2.5 Transfer Focus
+
+* wind-informed directed graph;
+* static vs dynamic diffusion;
+* long-horizon error accumulation;
+* deterministic backbone before UQ and conformal calibration.
 ## PM2.5 Transfer Hypotheses
 
 1. A directed wind-informed graph may be more physically meaningful than a symmetric distance graph.

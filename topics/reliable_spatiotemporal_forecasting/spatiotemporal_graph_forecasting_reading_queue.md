@@ -11,59 +11,47 @@
    Role: core convolutional spatiotemporal forecasting baseline; vanilla STGCN relearning and independent implementation specification.
 
 2. P-ST-002 / DCRNN
-   Role: directed diffusion, recurrent temporal modeling, and multi-step forecasting baseline; DCRNN relearning and independent implementation specification.
+   Role: directed diffusion, recurrent temporal modeling, and multi-step forecasting baseline; Rose Yu related.
 
-## Next Core Models
+## Core Next Models
 
-1. Graph WaveNet
-   Role: adaptive adjacency, dilated temporal convolution, hidden dependency learning.
+1. P-ST-003 / PM2.5-GNN
+   Role: domain-aware graph construction and environmental forecasting context.
 
-2. AGCRN
-   Role: node-adaptive parameter learning and data-adaptive graph generation.
+2. P-ST-004 / Graph WaveNet
+   Role: adaptive adjacency and hidden spatial dependency learning.
 
-3. MTGNN
-   Role: learned uni-directed graph for multivariate time series forecasting.
+3. P-ST-005 / AGCRN
+   Role: node-adaptive parameters and data-adaptive graph generation.
 
-## Attention and Transformer Extensions
+4. P-ST-006 / MTGNN
+   Role: learned directed dependency for multivariate time series.
 
-1. ASTGCN
-   Role: spatial-temporal attention; recent, daily, and weekly temporal components.
+## Advisor-Relevant Reliability Papers
 
-2. GMAN
-   Role: graph multi-attention for long-term traffic prediction.
+1. P-STUQ-001 / Quantifying Uncertainty in Deep Spatiotemporal Forecasting
+   Role: Rose Yu related UQ bridge for spatiotemporal forecasting.
 
-3. PDFormer
-   Role: propagation delay-aware dynamic long-range Transformer.
+2. P-CP-005 / CPTC
+   Role: conformal prediction under time-series change points.
 
-4. STAEformer
-   Role: simple strong Transformer baseline with spatiotemporal adaptive embedding.
+3. P-ROB-001 / Provably Robust Conformal Prediction with Improved Efficiency
+   Role: Lily Weng related robust conformal prediction.
 
-## Continuous-Time and Missingness-Aware Extensions
+4. P-EVAL-002 / Evaluating Neuron Explanations
+   Role: Lily Weng related trustworthy evaluation; later representation-analysis stage.
 
-1. STG-NCDE
-   Role: graph neural controlled differential equations; irregular and missing time series.
+5. P-DEC-001 / Prediction without Preclusion
+   Role: Lily Weng / UCSD related actionability and decision-risk extension.
 
-## Reliability and Calibration
+## Deferred Watchlist
 
-1. Quantifying Uncertainty in Deep Spatiotemporal Forecasting
-   Role: UQ method taxonomy and evaluation protocol.
+Do not add these to master index yet:
 
-2. CPTC
-   Role: conformal prediction for time series under change points.
+* ASTGCN
+* GMAN
+* PDFormer
+* STAEformer
+* STG-NCDE
 
-3. Provably Robust Conformal Prediction with Improved Efficiency
-   Role: robust conformal prediction under perturbation.
-
-## Project Principle
-
-DCRNN and STGCN are foundational, but spatiotemporal forecasting should not be reduced to only these two models.
-
-A reliable PM2.5 forecasting project must also understand:
-
-* adaptive graph construction;
-* dynamic propagation;
-* node heterogeneity;
-* attention or Transformer-based temporal modeling;
-* uncertainty quantification;
-* conformal calibration;
-* graph validity under distribution shift.
+These may be considered after STGCN, DCRNN, Graph WaveNet, AGCRN, MTGNN, STUQ, and CPTC are understood.

@@ -88,3 +88,6 @@
 | adaptive adjacency | Adaptive adjacency is a learned graph dependency matrix, often inferred from node embeddings or data, used when the predefined graph is incomplete or unreliable. | Candidate |
 | node-adaptive parameter | Node-adaptive parameters allow different nodes to use different model parameters or embeddings, helping capture node-specific heterogeneity. | Candidate |
 | graph learning module | A graph learning module infers hidden dependencies among variables or nodes instead of relying only on a predefined graph. | Candidate |
+| data-adaptive graph generation | Data-adaptive graph generation infers graph dependencies from observed data instead of relying only on a fixed predefined adjacency matrix. | Candidate |
+| node-adaptive parameter learning | Node-adaptive parameter learning allows different nodes to use node-specific parameters or embeddings, helping capture heterogeneous local dynamics. | Candidate |
+| directed dependency learning | Directed dependency learning estimates asymmetric relations among time series variables or graph nodes, useful when influence is not symmetric. | Candidate |
