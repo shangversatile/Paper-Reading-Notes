@@ -44,6 +44,38 @@
 5. P-DEC-001 / Prediction without Preclusion
    Role: Lily Weng / UCSD related actionability and decision-risk extension.
 
+## Mechanism Discovery and Reliable Dynamic Systems
+
+The immediate reading remains P-ST-001 / STGCN and P-ST-002 / DCRNN. These new papers extend the longer-term direction toward mechanism discovery, causal structure learning, reliable uncertainty, and applied forecasting. They should not interrupt the current STGCN-DCRNN-STUQ-CPTC path.
+
+### First mechanism-discovery additions
+
+1. P-MECH-001 / SINDy
+   Role: governing-equation discovery for nonlinear dynamical systems.
+
+2. P-MECH-002 / Neural Relational Inference
+   Role: latent interaction graph discovery and dynamics learning.
+
+3. P-CAUSALST-002 / Detecting and Quantifying Causal Associations in Large Nonlinear Time Series Datasets
+   Role: causal discovery for high-dimensional nonlinear time series.
+
+4. P-CAUSAL-001 / NOTEARS
+   Role: continuous optimization foundation for DAG structure learning.
+
+5. P-CAUSAL-002 / Invariant Causal Prediction
+   Role: causal invariance and robust prediction across environments.
+
+### Reliability and applied forecasting additions
+
+1. P-CAL-001 / On Calibration of Modern Neural Networks
+   Role: calibration and model monitoring foundation.
+
+2. P-TS-001 / Temporal Fusion Transformer
+   Role: interpretable multi-horizon forecasting baseline.
+
+3. P-DYN-002 / Neural Controlled Differential Equations
+   Role: irregular sampling and missingness-aware continuous-time modeling.
+
 ## Deferred Watchlist
 
 Do not add these to master index yet:

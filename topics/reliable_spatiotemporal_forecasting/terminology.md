@@ -5,7 +5,7 @@
 | distribution shift | Change between training, validation, test, or deployment distributions. | Candidate |
 | temporal shift | Time-dependent distribution change across seasons, periods, or regimes. | Candidate |
 | station holdout | Evaluation where some monitoring stations are withheld from training. | Candidate |
-| calibration | Agreement between predicted uncertainty and observed outcomes. | Candidate |
+| calibration | Calibration measures whether predicted confidence or uncertainty matches observed empirical frequencies. | Candidate |
 | coverage | Fraction of outcomes falling inside predictive intervals or sets. | Candidate |
 | coverage gap | Difference between nominal and empirical coverage. | Candidate |
 | interval width | Size of the predictive interval. | Candidate |
@@ -91,3 +91,10 @@
 | data-adaptive graph generation | Data-adaptive graph generation infers graph dependencies from observed data instead of relying only on a fixed predefined adjacency matrix. | Candidate |
 | node-adaptive parameter learning | Node-adaptive parameter learning allows different nodes to use node-specific parameters or embeddings, helping capture heterogeneous local dynamics. | Candidate |
 | directed dependency learning | Directed dependency learning estimates asymmetric relations among time series variables or graph nodes, useful when influence is not symmetric. | Candidate |
+| mechanism discovery | Mechanism discovery aims to infer the underlying equations, interaction structures, causal dependencies, or generative mechanisms that produce observed dynamics. | Candidate |
+| governing equation discovery | Governing equation discovery seeks explicit mathematical equations that describe the evolution of a dynamic system from data. | Candidate |
+| latent interaction graph | A latent interaction graph is an inferred graph representing hidden relations among entities in an interacting system. | Candidate |
+| time-series causal discovery | Time-series causal discovery estimates directed temporal dependencies or causal relationships among variables observed over time. | Candidate |
+| invariant prediction | Invariant prediction uses stability across environments or interventions to identify causal predictors and improve robustness under distribution shift. | Candidate |
+| multi-horizon forecasting | Multi-horizon forecasting predicts multiple future time steps and must handle error accumulation, temporal dependence, and uncertainty over the forecast horizon. | Candidate |
+| irregular time series | Irregular time series are observations sampled at non-uniform time intervals or with missing values, common in healthcare, industrial sensors, and environmental monitoring. | Candidate |
