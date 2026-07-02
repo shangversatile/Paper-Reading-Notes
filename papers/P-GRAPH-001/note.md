@@ -746,9 +746,294 @@ Shared graph convolution assumes that all input variables share the same spatial
 
 ## Graph Coarsening and Pooling
 
-The paper also proposes graph coarsening and pooling through multilevel clustering. It uses Graclus coarsening and then rearranges nodes into a balanced binary-tree-like ordering so that pooling can be implemented efficiently.
+The paper also proposes graph coarsening and pooling through multilevel clustering. This is a separate design component from spectral filtering: graph convolution defines how features are transformed on a graph level, while coarsening and pooling define how the model moves to a lower-resolution graph level.
 
-For my current PM2.5 forecasting baseline, this is secondary. A fixed station graph usually has a stable set of monitoring locations, and the first STGCN-style implementation should focus on graph convolution plus temporal modeling rather than hierarchical pooling. Still, this section is useful because it shows that graph CNN design depends not only on filters but also on how graph resolution is defined.
+For my PM2.5 station-level forecasting baseline, this part should be treated carefully. It is useful for understanding the paper's CNN-like hierarchy, but it is not automatically suitable for node-level forecasting where every original station still needs a prediction.
+
+### 1. What Pooling Means in Image CNNs
+
+Pooling in image CNNs aggregates local feature responses over a small regular region, such as a 2 by 2 window. It usually does not learn new parameters. Convolution learns feature detectors; pooling aggregates the resulting feature responses.
+
+For max pooling, the strongest activation in a local window is kept. This reduces spatial resolution, increases the effective receptive field of later layers, and makes local feature responses more stable to small shifts.
+
+For example:
+
+```math
+\begin{bmatrix} 1 & 3 \\ 2 & 0 \end{bmatrix} \rightarrow 3
+```
+
+This means the local region contains a strong feature response, so the max-pooled representation keeps that response while discarding precise within-window location.
+
+The reason image pooling is natural is that pixels live on a regular grid. A 2 by 2 block has an unambiguous spatial meaning.
+
+### 2. Why Graphs Cannot Directly Use 2 by 2 Pooling
+
+Graphs do not have a natural grid order. Node indices do not define spatial adjacency. Node 3 and node 4 may be adjacent in memory but unrelated on the graph, while node 3 and node 19 may be strongly connected.
+
+Graph nodes also have variable degrees. One node may have two neighbors, while another may have twenty. Therefore, graph pooling cannot simply group consecutive node indices. It first needs a graph coarsening procedure to decide which nodes form meaningful local groups.
+
+The key distinction is:
+
+Image pooling receives local blocks from the grid. Graph pooling must first construct local groups from the graph.
+
+### 3. Coarsening vs Pooling
+
+Graph coarsening handles graph structure. It decides which fine-level nodes should be merged, what the next coarser graph is, how coarse-level edge weights are constructed, and which graph Laplacian will be used at the next layer.
+
+Graph pooling handles node features. If the current hidden representation is:
+
+```math
+H^{(l)}\in\mathbb{R}^{n_l\times F_l}
+```
+
+then pooling produces a lower-resolution feature matrix:
+
+```math
+H^{(l+1)}\in\mathbb{R}^{n_{l+1}\times F_l}
+```
+
+The important distinction is:
+
+* coarsening changes $G_l$, $W_l$, and $L_l$;
+* pooling changes $H^{(l)}$;
+* graph convolution transforms features on a fixed graph level.
+
+Thus, graph coarsening produces the structural hierarchy, while graph pooling applies that hierarchy to feature maps during the forward pass.
+
+### 4. Graclus Matching and the Coarsening Criterion
+
+The paper uses the coarsening phase of the Graclus multilevel clustering algorithm. At each coarsening level, Graclus uses a greedy matching rule.
+
+It chooses an unmarked node $i$ and matches it with one unmarked neighbor $j$ that maximizes:
+
+```math
+W_{ij}\left(\frac{1}{d_i}+\frac{1}{d_j}\right)
+```
+
+where:
+
+```math
+d_i=\sum_q W_{iq}
+```
+
+is the weighted degree of node $i$.
+
+Expanding the score gives:
+
+```math
+W_{ij}\left(\frac{1}{d_i}+\frac{1}{d_j}\right)=\frac{W_{ij}}{d_i}+\frac{W_{ij}}{d_j}
+```
+
+Here, $W_{ij}$ measures absolute connection strength between nodes $i$ and $j$. The degree $d_i$ measures how strongly node $i$ is connected to all its neighbors. The ratio $W_{ij}/d_i$ measures how important edge $(i,j)$ is from the perspective of node $i$, and $W_{ij}/d_j$ gives the corresponding importance from the perspective of node $j$.
+
+The score is large when the edge is both strong and locally important to both endpoints. If $W_{ij}$ is large but both $i$ and $j$ are high-degree hubs, then the edge may not be special. If the same edge weight forms a large proportion of both nodes' total degree, then the pair is more naturally grouped.
+
+Therefore, the rule does not only prefer large edge weights. It prefers edges that are strong relative to the local connectivity of both nodes. This approximates a local normalized-cut intuition: merge nodes that are tightly connected internally and less strongly tied to the rest of the graph.
+
+This is a greedy approximation, not a globally optimal clustering algorithm.
+
+### 5. What Happens to Edge Weights After Coarsening
+
+When fine-level nodes are merged into coarse-level nodes, the next graph level must also have a weighted adjacency matrix. If coarse node $p$ contains fine nodes $C(p)$ and coarse node $q$ contains fine nodes $C(q)$, then a conceptual expression for the coarse edge weight is:
+
+```math
+W^{(l+1)}_{pq}=\sum_{u\in C(p)}\sum_{v\in C(q)}W^{(l)}_{uv}
+```
+
+This means the coarse graph summarizes all fine-level connections between the two groups. After constructing $W^{(l+1)}$, the next layer can compute its own Laplacian $L_{l+1}$.
+
+Therefore, coarsening produces a new graph, not merely a smaller feature matrix.
+
+### 6. Vertex Rearrangement and Efficient Pooling
+
+After coarsening, matched nodes may not be adjacent in the original node order. For example:
+
+* coarse node 0 contains fine nodes 3 and 19;
+* coarse node 1 contains fine nodes 5 and 8;
+* coarse node 2 contains fine nodes 0 and 27.
+
+Original node order may be:
+
+```text
+0, 1, 2, 3, 4, 5, ..., 19, ..., 27
+```
+
+After rearrangement:
+
+```text
+3, 19, 5, 8, 0, 27, ...
+```
+
+Then pooling can be implemented like 1D pairwise pooling:
+
+```text
+pool positions 0 and 1
+pool positions 2 and 3
+pool positions 4 and 5
+```
+
+This rearrangement does not mean the graph becomes a 1D chain. The full graph adjacency is still stored in $W_l$ or $L_l$. The 1D ordering is only an implementation trick for efficient pooling.
+
+The complete adjacency relation remains represented by the adjacency matrix or Laplacian. Rearrangement only places children of the same coarse parent next to each other in memory, reducing lookup overhead and improving contiguous memory access and parallel pooling efficiency.
+
+### 7. Why Pairwise Merging
+
+The paper uses pairwise matching so that each coarsening level roughly halves the number of nodes. This creates a binary hierarchy similar to repeated pooling in CNNs.
+
+This is an efficient design choice, not the only possible graph pooling method. Other graph pooling methods may use larger clusters, attention, learned assignment, top-$k$ selection, or domain-specific regions.
+
+Pairwise matching is chosen to create an efficient, regular, CNN-like hierarchy, not because graph neighborhoods naturally contain exactly two nodes.
+
+### 8. Fake Nodes and Pooling Neutrality
+
+Some coarse nodes may have only one child because a fine node is unmatched. These are singleton nodes. Fake nodes are added so that every parent has two children and pooling can be implemented regularly.
+
+Fake nodes are disconnected from the graph and should not carry semantic information. For ReLU activation followed by max pooling, a fake value of zero can be neutral because ReLU activations are nonnegative:
+
+```math
+\max(h,0)=h \quad \text{when } h\ge 0
+```
+
+This neutrality depends on activation and pooling. For average pooling, a fake zero is not neutral because it reduces the average. For max pooling without ReLU, if real features can be negative, fake zero may incorrectly dominate. For signed features, fake nodes require masks or carefully chosen neutral values.
+
+Fake nodes are engineering artifacts. If their neutral value is not compatible with the pooling operation, they can introduce side effects.
+
+### 9. Where Coarsening Happens in the Model Pipeline
+
+In this paper, graph coarsening is a preprocessing step. It is computed before training from the input graph structure. The hierarchy is fixed during training and inference:
+
+```text
+G0 -> G1 -> G2 -> ...
+```
+
+The model does not rerun Graclus for each mini-batch. It also does not learn the Graclus matching rule by gradient descent. During the forward pass, the fixed coarsening maps are used to perform pooling after graph convolution and activation.
+
+Coarsening is a fixed structural preprocessing step, not a trainable layer in the original paper.
+
+### 10. Full Model Flow and Trainable Parameters
+
+Let graph level $l$ have graph:
+
+```math
+G_l=(V_l,E_l,W_l)
+```
+
+Laplacian:
+
+```math
+L_l
+```
+
+and hidden features:
+
+```math
+H^{(l)}\in\mathbb{R}^{n_l\times F_l}
+```
+
+A graph convolution layer at this level can be written as:
+
+```math
+Z^{(l)}_{:,j}=\sum_{i=1}^{F_l}\sum_{k=0}^{K_l-1}\theta^{(l)}_{i,j,k}T_k(\tilde L_l)H^{(l)}_{:,i}
+```
+
+Then activation gives:
+
+```math
+A^{(l)}=\sigma(Z^{(l)})
+```
+
+Pooling with children set $C_l(p)$ gives:
+
+```math
+H^{(l+1)}_{p,f}=\max_{q\in C_l(p)}A^{(l)}_{q,f}
+```
+
+An average pooling alternative would be:
+
+```math
+H^{(l+1)}_{p,f}=\frac{1}{|C_l(p)|}\sum_{q\in C_l(p)}A^{(l)}_{q,f}
+```
+
+The full flow is:
+
+```text
+Preprocessing:
+    Build G0.
+    Coarsen G0 to G1, G2, ...
+    Compute L0, L1, L2, ...
+    Build fixed pooling maps and vertex permutations.
+
+Forward pass:
+    H0 = input graph signals.
+    Z0 = GraphConv(H0, L0; Theta0).
+    A0 = activation(Z0).
+    H1 = Pool(A0; C0).
+
+    Z1 = GraphConv(H1, L1; Theta1).
+    A1 = activation(Z1).
+    H2 = Pool(A1; C1).
+
+    ...
+    prediction = FullyConnected(flatten(HL)).
+```
+
+The trainable components are:
+
+* Chebyshev coefficients $\theta$;
+* fully connected weights;
+* biases if used.
+
+The fixed preprocessing structures are:
+
+* graph adjacency matrices $W_l$;
+* graph Laplacians $L_l$;
+* coarsening maps $C_l$;
+* vertex permutations;
+* fake-node structure;
+* pooling group assignments.
+
+The model learns filters on a fixed graph hierarchy. It does not learn the hierarchy itself in the original paper.
+
+### 11. PM2.5 Station-Level Forecasting Interpretation
+
+PM2.5 station-level forecasting usually requires predictions at the original station resolution:
+
+```math
+\mathbf{x}_t\in\mathbb{R}^n\rightarrow\mathbf{x}_{t+1}\in\mathbb{R}^n
+```
+
+Direct pooling reduces node resolution:
+
+```math
+n_l\rightarrow n_{l+1}
+```
+
+This creates station-level risks:
+
+* loss of station-specific spatial information;
+* local pollution peaks may be smoothed or hidden;
+* high-risk station detection may degrade;
+* calibration at individual stations may degrade;
+* static coarsening may fail under wind, seasonal, or temporal shift;
+* pooling may help graph-level classification but may not directly fit node-level forecasting.
+
+If pooling is used for PM2.5 forecasting, it likely needs an encoder-decoder structure, unpooling, skip connections, or multi-scale auxiliary representations to return to station-level predictions.
+
+### 12. Reliability Risks and Critical Reflection
+
+Graph coarsening converts graph topology into a fixed multi-scale hierarchy. This may help graph-level classification, but for station-level environmental forecasting it becomes a strong reliability assumption.
+
+Critical questions include:
+
+* Which stations are grouped together?
+* Does the grouping match real pollution regions?
+* Does coarsening hide local anomalies?
+* Does pooling hurt high-risk station detection?
+* Does regional averaging cause the model to ignore local peaks?
+* Does a fixed coarsening hierarchy remain valid under dynamic meteorology?
+* Is the graph hierarchy a meaningful environmental structure or merely an artifact of copying CNN design?
+
+For PM2.5 forecasting, coarsening may become a reliability risk if it removes exactly the station-level variation that matters for warnings, calibration, and downstream decisions. The model assumes that the same station clusters remain meaningful across time, variables, and distribution shifts. That assumption should be tested rather than inherited from image CNN design.
 
 ## Experimental Evidence
 
