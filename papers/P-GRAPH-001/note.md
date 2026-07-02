@@ -1035,18 +1035,218 @@ Critical questions include:
 
 For PM2.5 forecasting, coarsening may become a reliability risk if it removes exactly the station-level variation that matters for warnings, calibration, and downstream decisions. The model assumes that the same station clusters remain meaningful across time, variables, and distribution shifts. That assumption should be tested rather than inherited from image CNN design.
 
-## Experimental Evidence
+## Experiments and Graph Quality
 
-The paper evaluates the method on MNIST and 20NEWS.
+### 1. What the Experiments Test
 
-The main lessons for this project are:
+The experiments are not only a search for state-of-the-art benchmark accuracy. They test whether the proposed graph CNN construction behaves like a useful convolutional model under different graph conditions.
 
-* Chebyshev filters make spectral graph convolution computationally practical on sparse graphs.
-* On MNIST, graph CNN performance can approach classical CNN performance when the graph reflects the grid structure well.
-* On text classification, graph construction choices affect performance.
-* Graph quality is not a minor preprocessing issue; it is a condition for the model's usefulness.
+The key experimental questions are:
+
+* Can a graph CNN approximate classical CNN behavior on regular grid-like data?
+* Can the same graph CNN machinery operate on irregular-domain data?
+* Do Chebyshev filters improve locality, parameter efficiency, and computational scalability?
+* How strongly do learned filters and final performance depend on graph quality?
+
+This matters for reliable PM2.5 forecasting because the paper's experimental message is not simply "graph CNNs work." The stronger message is that graph CNNs work when the graph gives the model a meaningful notion of neighborhood.
+
+### 2. MNIST as a Sanity Check
+
+MNIST is used as a sanity check because images already live on a regular grid. If graph CNN cannot work on a graph constructed from image pixels, it would be difficult to argue that it generalizes CNNs.
+
+The authors construct pixels as graph nodes and connect them according to image geometry. Under this construction, graph CNN performance approaches classical CNN performance. The point is not that graph CNN beats classical CNN on images. The point is that graph CNN can recover CNN-like behavior when the graph structure matches the data geometry.
+
+This also reveals a limitation: spectral graph filters are typically isotropic on general graphs because ordinary graph edges do not encode directions like up, down, left, and right. For PM2.5, this is important because pollution transport can be directional due to wind. A distance-based undirected station graph may capture local proximity while still missing directional transport.
+
+### 3. 20NEWS as an Irregular Domain Example
+
+20NEWS shows that the method can operate on non-grid data. Words are graph nodes, and a document is represented as a graph signal over the word graph. The graph is built from word embeddings, so locality means semantic neighborhood rather than physical proximity.
+
+This demonstrates the flexibility of graph CNNs, but it also shows that graph construction quality directly affects the model. If embedding neighborhoods are semantically meaningful, graph convolution can aggregate useful word-neighborhood information. If the graph is noisy or semantically weak, the model filters over misleading neighborhoods.
+
+### 4. Chebyshev Filter Comparison
+
+The experiments compare several spectral filter parameterizations:
+
+* Non-Param: flexible, but not localized and has $O(n)$ learning complexity.
+* Spline: an earlier spectral parametrization that reduces some complexity but does not give the same simple sparse localized recurrence.
+* Chebyshev: localized, parameter efficient, and scalable on sparse graphs.
+
+Chebyshev is not only an accuracy improvement. Its main contribution is the combination of:
+
+* $K$-hop locality,
+* $O(K)$ filter parameters,
+* $O(K\lvert E\rvert)$ sparse filtering cost,
+* no explicit multiplication by graph Fourier basis during filtering.
+
+This is why the paper becomes a foundation for later spatiotemporal graph models. It turns graph convolution from a dense spectral operation into a sparse local operation that can be used repeatedly inside a neural architecture.
+
+### 5. Graph Quality Experiment
+
+The graph quality experiment is one of the most important lessons of the paper. If the graph is meaningful, graph convolution can extract local and compositional features. If the graph is random or poorly constructed, convolution operates on meaningless neighborhoods.
+
+This point is central for PM2.5 forecasting. A model can have a correct Chebyshev implementation and still fail because the adjacency matrix connects stations according to the wrong dependency story. A distance graph, correlation graph, wind-informed graph, learned graph, and hybrid graph each define a different local world for the same monitoring stations.
+
+Graph CNN does not remove the need for good structure. It makes the graph structure even more central.
+
+A graph convolutional model is only as reliable as the graph-defined locality it relies on.
 
 The experiments support the method as a graph convolution foundation, but they do not establish reliability for environmental forecasting. They do not test temporal shift, calibration, uncertainty intervals, station holdout, missingness, or downstream decision cost.
+
+## PM2.5 Graph Construction and Reliability Validation
+
+### 1. Graph Structure as a Modeling Hypothesis
+
+In PM2.5 forecasting, the graph adjacency matrix $W$ should not be interpreted as distance itself. It should be interpreted as a modeling hypothesis about spatial dependence, transport relationship, or local interaction strength between monitoring stations.
+
+The graph is not a background preprocessing detail. It is the structural assumption on which graph convolution depends.
+
+This means graph construction must be documented, compared, and stress-tested. A station graph defines what the model treats as local, which signals can influence each other, and which failures may arise under weather or seasonal shift.
+
+### 2. What Edge Weight Means
+
+The value $W_{ij}$ should answer:
+
+* how strongly station $i$ and station $j$ are related,
+* whether information from station $i$ should influence station $j$,
+* whether the relation is physical, statistical, meteorological, or learned,
+* whether the relation is static or time-dependent,
+* whether the relation is symmetric or directional.
+
+These questions are not interchangeable. Geographic closeness may define a stable physical prior, lagged correlation may reflect predictive dependence, wind alignment may define dynamic transport, and learned edges may capture useful but unstable shortcuts.
+
+### 3. Candidate Graph Constructions
+
+#### Distance graph
+
+```math
+W^{\mathrm{dist}}_{ij}=\exp\left(-\frac{\mathrm{dist}(i,j)^2}{\tau^2}\right)
+```
+
+Distance graph is simple and stable, but it cannot represent wind direction, terrain, pollution sources, or dynamic transport. It is a reasonable baseline, not a guarantee of physical influence.
+
+#### Correlation graph
+
+```math
+W^{\mathrm{corr}}_{ij}=|\mathrm{corr}(x_i(t),x_j(t-\ell))|
+```
+
+Correlation graph captures observed statistical dependence, but it may learn common seasonal trends or confounding instead of real transport. It must be built only from training data to avoid future-information leakage.
+
+#### Meteorology-informed dynamic graph
+
+Let $r_{ij}$ be the direction from station $i$ to station $j$, and let $u_t$ be the wind direction vector.
+
+```math
+W^{\mathrm{wind}}_{ij,t}
+=
+\exp\left(-\frac{\mathrm{dist}(i,j)}{\tau}\right)
+\cdot
+\max\left(0,\cos(\mathbf{u}_t,\mathbf{r}_{ij})\right)
+\cdot
+s_t
+```
+
+This graph is stronger when wind direction supports transport from $i$ to $j$. However, such a graph is directional and dynamic. Standard Chebyshev Laplacian filtering assumes an undirected symmetric Laplacian, so one must either symmetrize the graph or use a directed diffusion-style graph operator.
+
+#### Hybrid graph
+
+```math
+W_{ij,t}
+=
+\alpha W^{\mathrm{dist}}_{ij}
++
+\beta W^{\mathrm{corr}}_{ij}
++
+\gamma W^{\mathrm{wind}}_{ij,t}
++
+\delta W^{\mathrm{source}}_{ij}
+```
+
+A hybrid graph combines physical priors, statistical dependence, meteorology, and source information. It is attractive because no single graph construction captures all PM2.5 mechanisms.
+
+#### Learned graph
+
+```math
+W_{ij,t}=f_\phi(e_i,e_j,\mathrm{dist}_{ij},\mathrm{meteorology}_t,\mathrm{history}_{i,t},\mathrm{history}_{j,t})
+```
+
+Learned graph is flexible but dangerous. It can learn shortcuts rather than physical relations.
+
+A learned graph should be constrained by:
+
+* sparsity,
+* nonnegative weights,
+* top-k neighbor mask,
+* distance prior,
+* temporal smoothness,
+* no future leakage,
+* physical plausibility,
+* graph perturbation robustness.
+
+### 4. Ensuring Locality
+
+Locality in PM2.5 is not merely geographic closeness. It means the selected graph neighborhood should correspond to physically or statistically plausible local influence.
+
+Practical checks include:
+
+* sparsify $W$ with top-k or distance threshold,
+* use Chebyshev support $K$ to control propagation range,
+* include physical constraints such as wind direction, terrain barriers, or emission source proximity,
+* compare with random, shuffled, fully connected, and identity graphs,
+* test robustness under edge dropout and wrong graph perturbations.
+
+Locality is not guaranteed by Chebyshev filtering alone. Chebyshev filtering is local with respect to the chosen graph. If the graph is wrong, the model is locally wrong.
+
+### 5. Ensuring Stationarity
+
+Graph stationarity means that the same learned local filter can be reused across graph locations or regimes. This is a strong assumption for PM2.5 because urban, suburban, industrial, coastal, and mountainous stations may have different local mechanisms.
+
+Useful experiments include:
+
+* train on one season, test on another,
+* train on one region, test on another,
+* evaluate residual spatial autocorrelation,
+* evaluate coverage under temporal shift,
+* check whether uncertainty increases when stationarity breaks,
+* compare static graph vs dynamic graph.
+
+If a graph works only on clean validation but fails under seasonal or meteorological shift, it does not provide reliable stationarity.
+
+### 6. Ensuring Compositionality
+
+Compositionality means local patterns can combine into larger-scale patterns. For PM2.5, a possible hierarchy is:
+
+* station-level anomaly,
+* neighborhood pollution pattern,
+* city-level pollution episode,
+* regional transport event.
+
+This CNN-like hierarchy is not automatically valid for environmental data. It should be tested rather than assumed.
+
+Useful checks include:
+
+* compare shallow vs deep graph convolution,
+* compare small $K$ vs large $K$,
+* test whether coarsening hides local peaks,
+* evaluate high-risk station detection,
+* evaluate whether multi-scale representation improves robustness or merely smooths difficult cases.
+
+### 7. Validation Protocol for Graph Reasonableness
+
+| Validation Type | Question | Example Test |
+| --- | --- | --- |
+| Physical plausibility | Do edges match plausible transport? | wind-direction alignment, distance decay, terrain/source checks |
+| Statistical relevance | Do edges carry predictive dependence? | lagged correlation, residual correlation, Granger-style test |
+| Predictive utility | Does the graph improve forecasting? | MAE/RMSE under clean and shifted splits |
+| Calibration | Does uncertainty behave correctly? | coverage, interval width, calibration error |
+| Decision quality | Does it preserve high-risk ranking? | Top-K risk allocation, missed high-risk stations |
+| Robustness | Does performance survive graph errors? | edge dropout, shuffled graph, wrong wind graph |
+| Interpretability | Are learned edges meaningful? | learned graph vs physical prior alignment |
+
+### 8. Final PM2.5 Graph Construction Principle
+
+In reliable PM2.5 forecasting, graph construction should be treated as a falsifiable modeling hypothesis rather than a preprocessing detail. A graph is reasonable only if it encodes physically plausible local interactions, remains statistically useful under distribution shift, supports compositional multi-scale representation without hiding local risks, and improves not only clean prediction error but also calibration, uncertainty coverage, and downstream decision quality.
 
 ## Key Assumptions
 
@@ -2576,6 +2776,58 @@ A minimal Chebyshev graph convolution interface should make the graph assumption
 
 For the reliability project, implementation tests are not enough. The experimental protocol should later compare at least distance-based, correlation-based, and perturbed graph variants under forecasting error, coverage, sharpness, and decision-cost metrics.
 
+## Final Paper-Level Summary
+
+### 1. Core Contribution
+
+P-GRAPH-001 transforms graph convolution from an expensive spectral operation into a localized, parameter-efficient, scalable graph CNN layer using Chebyshev polynomial approximation.
+
+### 2. Mathematical Chain
+
+```text
+graph Laplacian
+→ graph Fourier basis
+→ spectral filtering
+→ non-parametric filter limitation
+→ polynomial filter
+→ Chebyshev recurrence
+→ localized graph convolution
+→ multi-feature graph convolution
+→ graph coarsening and pooling
+→ graph CNN architecture
+```
+
+### 3. What the Paper Solves
+
+The paper solves several foundational problems:
+
+* defines graph convolution through spectral filtering,
+* avoids explicit eigendecomposition during filtering,
+* controls locality through polynomial degree,
+* reduces learning complexity from $O(n)$ to $O(K)$,
+* reduces computation to sparse Laplacian-vector products,
+* enables CNN-like architectures on irregular graphs.
+
+### 4. What the Paper Does Not Solve
+
+The paper also leaves important reliability problems open:
+
+* it does not automatically construct the right graph,
+* it assumes graph-defined locality is meaningful,
+* it uses fixed graph structure,
+* original Chebyshev Laplacian is less natural for directed dynamic transport,
+* pooling/coarsening may not fit node-level forecasting,
+* graph quality is a central reliability bottleneck,
+* output channels are learned representations, not physical mechanisms.
+
+### 5. Relevance to Reliable PM2.5 Forecasting
+
+For PM2.5 forecasting, the paper provides the mathematical and architectural basis for graph-local spatial filtering, but the reliability problem shifts to graph construction, graph validation, dynamic propagation, uncertainty calibration, and forecast-to-decision evaluation.
+
+### 6. Final Takeaway
+
+The main lesson is not simply that Chebyshev graph convolution is efficient. The deeper lesson is that graph neural forecasting inherits all assumptions encoded in the graph. Reliable graph forecasting requires verifying that graph-defined locality, stationarity, and compositionality remain valid under distribution shift.
+
 ## What I Should Be Able to Explain After Reading
 
 1. Why is translation not naturally defined on graphs?
@@ -2591,7 +2843,9 @@ For the reliability project, implementation tests are not enough. The experiment
 
 ## Reading Status
 
-Reading
+Status: Completed first-pass research reading
+Focus: Chebyshev graph convolution, graph coarsening, graph quality, and PM2.5 reliability transfer
+Next step: Connect P-GRAPH-001 to STGCN / DCRNN / Graph WaveNet / reliable spatiotemporal forecasting literature
 
 ## Follow-Up Actions
 
