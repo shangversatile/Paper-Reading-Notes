@@ -15,6 +15,9 @@
 The eight-week public literature and reproduction plan is maintained in
 `topics/reliable_spatiotemporal_forecasting/8-week-literature-and-reproduction-plan.md`.
 
+A dedicated spatiotemporal graph forecasting queue is maintained in
+`topics/reliable_spatiotemporal_forecasting/spatiotemporal_graph_forecasting_reading_queue.md`.
+
 ## Core Literature Priority
 
 ### Priority 1 - Read and Reproduce
