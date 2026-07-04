@@ -19,14 +19,31 @@ Paper
 -> Reproduction or Minimal Experiment
 -> Research Output
 
-## Current Focus
+## Research Direction
+
+This repository supports my long-term research direction:
+
+Mechanism-guided Trustworthy AI Systems.
+
+The goal is to study how AI models can be made understandable,
+calibratable, intervenable, and controllable in complex dynamic
+environments through mechanism interpretability, concept representations,
+causal discovery, spatiotemporal graph learning, uncertainty calibration,
+and system-level monitoring.
+
+Current flagship line:
 
 Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift:
 Calibration, Uncertainty Quantification, and Risk-Aware Decision-Making.
 
-Core related literature includes spatiotemporal forecasting,
-uncertainty quantification, conformal calibration, dynamic distribution
-shift, robust evaluation, and risk-aware decision-making.
+## Current Core Threads
+
+* Spatiotemporal graph forecasting: ChebNet, STGCN, DCRNN, Graph WaveNet, AGCRN, MTGNN.
+* Mechanism discovery: SINDy, Neural Relational Inference, causal time-series discovery.
+* Uncertainty and calibration: MC Dropout, Deep Ensembles, calibration, conformal prediction.
+* Distribution-shift evaluation: robustness, stress testing, monitoring, failure analysis.
+* Interpretable representation: concept representation, CKA, probing, representation stability.
+* Decision reliability: selective prediction, risk-aware allocation, actionability.
 
 ## Current Public Roadmap
 

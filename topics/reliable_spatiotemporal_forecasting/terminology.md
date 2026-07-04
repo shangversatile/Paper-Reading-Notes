@@ -98,3 +98,33 @@
 | invariant prediction | Invariant prediction uses stability across environments or interventions to identify causal predictors and improve robustness under distribution shift. | Candidate |
 | multi-horizon forecasting | Multi-horizon forecasting predicts multiple future time steps and must handle error accumulation, temporal dependence, and uncertainty over the forecast horizon. | Candidate |
 | irregular time series | Irregular time series are observations sampled at non-uniform time intervals or with missing values, common in healthcare, industrial sensors, and environmental monitoring. | Candidate |
+
+## Direction-Level Reliability Terms
+
+### mechanism-guided trustworthy AI systems
+
+Mechanism-guided trustworthy AI systems aim to make AI models understandable, calibratable, intervenable, and controllable by combining mechanism interpretability, concept representations, causal discovery, uncertainty calibration, distribution-shift evaluation, and monitoring.
+
+### mechanism interpretability
+
+Mechanism interpretability focuses on understanding the processes, structures, or rules that generate model behavior or system dynamics, rather than only producing post-hoc feature attributions.
+
+### concept representation
+
+Concept representation studies whether models encode human-meaningful or system-meaningful concepts and whether those concepts remain stable under distribution shift.
+
+### system-level monitoring
+
+System-level monitoring tracks model behavior after deployment, including data drift, prediction drift, calibration drift, uncertainty quality, failure modes, and downstream decision risk.
+
+### calibratable model
+
+A calibratable model is a model whose confidence or uncertainty estimates can be adjusted and evaluated so that predicted probabilities or intervals match empirical outcomes.
+
+### intervenable AI system
+
+An intervenable AI system supports meaningful corrections, controls, or decision changes when monitoring detects unreliable behavior.
+
+### controllable AI system
+
+A controllable AI system exposes mechanisms, uncertainty, and monitoring signals that allow operators or automated policies to keep model behavior within acceptable reliability boundaries.

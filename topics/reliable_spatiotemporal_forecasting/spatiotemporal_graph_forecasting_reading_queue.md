@@ -1,5 +1,18 @@
 # Spatiotemporal Graph Forecasting Reading Queue
 
+## Strategic Direction
+
+Mechanism-guided trustworthy AI systems are the broader direction. Reliable spatiotemporal forecasting is the current flagship testbed.
+
+The immediate reading path remains:
+
+1. P-ST-002 / DCRNN
+2. P-ST-001 / STGCN
+3. P-STUQ-001 / Quantifying Uncertainty in Deep Spatiotemporal Forecasting
+4. P-CP-005 / CPTC
+
+DCRNN is being read first because it directly continues the ChebNet discussion into directed diffusion and recurrent multi-step forecasting. STGCN remains the core convolutional baseline and should be read next for comparison.
+
 ## Completed
 
 1. P-GRAPH-001 / ChebNet
@@ -7,13 +20,19 @@
 
 ## Immediate Reading
 
-1. P-ST-001 / STGCN
-   Role: core convolutional spatiotemporal forecasting baseline; vanilla STGCN relearning and independent implementation specification.
-
-2. P-ST-002 / DCRNN
+1. P-ST-002 / DCRNN
    Role: directed diffusion, recurrent temporal modeling, and multi-step forecasting baseline; Rose Yu related.
 
-STGCN is read first because it is a direct continuation from ChebNet to spatiotemporal convolution. DCRNN is read next to introduce directed diffusion and recurrent multi-step forecasting.
+2. P-ST-001 / STGCN
+   Role: core convolutional spatiotemporal forecasting baseline; vanilla STGCN relearning and independent implementation specification.
+
+3. P-STUQ-001 / Quantifying Uncertainty in Deep Spatiotemporal Forecasting
+   Role: Rose Yu related UQ bridge for spatiotemporal forecasting.
+
+4. P-CP-005 / CPTC
+   Role: conformal prediction under time-series change points.
+
+DCRNN is being read first because it directly continues the ChebNet discussion into directed diffusion and recurrent multi-step forecasting. STGCN remains the core convolutional baseline and should be read next for comparison.
 
 ## Core Next Models
 
@@ -48,7 +67,7 @@ STGCN is read first because it is a direct continuation from ChebNet to spatiote
 
 ## Mechanism Discovery and Reliable Dynamic Systems
 
-The immediate reading remains P-ST-001 / STGCN and P-ST-002 / DCRNN. These new papers extend the longer-term direction toward mechanism discovery, causal structure learning, reliable uncertainty, and applied forecasting. They should not interrupt the current STGCN-DCRNN-STUQ-CPTC path.
+The immediate reading remains P-ST-002 / DCRNN, P-ST-001 / STGCN, P-STUQ-001, and P-CP-005. These new papers extend the longer-term direction toward mechanism discovery, causal structure learning, reliable uncertainty, and applied forecasting. They should not interrupt the current DCRNN-STGCN-STUQ-CPTC path.
 
 ### First mechanism-discovery additions
 
