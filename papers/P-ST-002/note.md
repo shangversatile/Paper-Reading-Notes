@@ -17,55 +17,59 @@
 **Reading Tier:** Tier 1
 **Track:** P-ST / Spatiotemporal forecasting models
 **Related Project:** Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift
+**Current Reading Scope:** Introduction-focused first-chapter entry
 
 ### Why This Paper Is in the Curriculum
 
-DCRNN 是 graph-based spatiotemporal forecasting 的 canonical model 之一。它把 traffic forecasting 明确建模为 weighted directed graph 上的 sequence-to-sequence graph signal forecasting，并提出 directed diffusion convolution 作为空间依赖算子，再与 recurrent sequence modeling 结合。
+从 Introduction 看，DCRNN 的第一层价值不是某个具体公式，而是问题重构：它把 traffic forecasting 从一组独立的 time series forecasting tasks，改写成 road sensor network 上的 spatiotemporal graph forecasting problem。这个 framing 同时要求处理 spatial dependency、temporal dynamics 和 long-horizon forecasting。
 
-这篇论文在当前阅读路线中的价值主要有五点：
+这篇论文在当前阅读路线中属于 Tier 1，因为它提供了一个 canonical directed spatiotemporal forecasting backbone：
 
-- 它建立了 directed random-walk diffusion convolution 作为交通网络空间依赖建模的核心 operator。
-- 它把 graph diffusion 和 recurrent temporal modeling 整合到 DCGRU 中，是后续 spatiotemporal neural forecasting backbone 的重要参照。
-- 它适合作为 traffic、PM2.5、air quality、energy、climate 等 complex dynamic systems 的 baseline 思维起点。
-- 它帮助理解后续模型，例如 Graph WaveNet、AGCRN、MTGNN，以及 adaptive graph、learned graph、uncertainty/calibration extension 的动机。
-- 它暴露了可靠预测项目中必须处理的问题：graph construction risk、static graph assumption、long-horizon error accumulation、point metric 与 decision reliability 的断裂。
+- 它明确把 traffic sensors 组织成 weighted directed graph，而不是 Euclidean grid。
+- 它把 traffic flow dynamics 类比为 graph 上的 diffusion process。
+- 它提出用 diffusion convolution 捕捉 road-network spatial dependency。
+- 它把 diffusion convolution 与 sequence-to-sequence recurrent modeling 结合，用于 multi-step forecasting。
+- 它引入 scheduled sampling 来缓解 long-horizon decoder 的 train-test mismatch。
+
+Introduction 对后续学习的直接意义是：后面读 Section 2.1 和 2.2 时，要重点验证 directed diffusion convolution 是否真正解决了 Introduction 中提出的 three challenges，而不是只记住 DCRNN 是一个 graph RNN model。
 
 ## 3. Core Problem
 
-这篇论文解决的是 road sensor networks 上的 multi-step traffic forecasting：给定过去一段时间各传感器节点的 traffic readings，以及道路网络图结构，预测未来多个 horizon 的 traffic speed 或 traffic flow。
+Introduction 将 DCRNN 的核心任务定义为 road sensor networks 上的 multi-step traffic forecasting：给定历史 traffic speed observations 和 underlying road network，预测未来多个时间步的 traffic speeds。
 
-传统方法面临几个结构性限制：
+这不是普通的单变量或多变量时间序列预测。论文强调 traffic forecasting 至少同时包含三个困难：
 
-- Classical time-series models 通常依赖 stationarity 或较弱的非线性表达能力，难以处理大规模道路网络中的非线性时空依赖。
-- Image-style CNN 假设 Euclidean grid structure，但道路传感器并不天然位于规则网格上。
-- Spectral graph convolution，例如 ChebNet，更自然地适用于 undirected graph 或 symmetric graph Laplacian；而 traffic networks 具有强方向性。
-- 道路网络是 non-Euclidean and directional：同一条路同一方向的传感器可能高度相关，而几何上接近但方向相反的传感器可能动态不同。
-- Long-horizon forecasting 会出现 error accumulation，并且训练时使用 ground truth、测试时使用模型自身预测，形成 train-test mismatch。
+1. **Complex spatial dependency on road networks.** 传感器之间的关系不由简单 Euclidean closeness 决定，而由道路拓扑、连接方向和交通流传播路径决定。
+2. **Nonlinear temporal dynamics under changing road conditions.** 交通状态会随时间、拥堵、事故、需求变化和道路条件变化而非线性演化。
+3. **Inherent difficulty of long-term forecasting and error accumulation.** Multi-step prediction 会因为 decoder 连续使用历史预测而产生 error propagation 和 exposure bias。
 
-DCRNN 的核心重构是：把问题从普通 multivariate time-series forecasting 转为 directed graph signal sequence forecasting。它用 graph signal 表示每个时间点所有节点上的观测，用 directed diffusion 表示空间传播，用 encoder-decoder recurrent model 表示多步未来序列。
+Introduction 同时解释了为什么 prior methods 不够：
+
+- ARIMA 和 Kalman filtering 有用，但往往依赖 stationarity assumptions；真实 traffic data 经常违反这种假设。
+- 一些 deep learning methods 可以建模非线性时间动态，但如果忽略 spatial structure，就会丢失 road-network dependency。
+- Euclidean CNN 假设 regular grid structure，不自然适用于 irregular road sensor graph。
+- Spectral graph convolution methods such as ChebNet 更自然地服务于 undirected graph；而 traffic influence 是 directional 的。
+
+因此，DCRNN 的 proposed reframing 是：把 traffic forecasting 表述为 weighted directed graph 上的 graph signal sequence forecasting，用 directed diffusion 处理空间依赖，用 recurrent seq2seq model 处理时间依赖和多步预测。
 
 ## 4. Intuition Before the Math
 
-可以用下面的 mental model 理解 DCRNN：
+Introduction 层面的直觉可以写成以下链条：
 
 ```text
-historical graph signal sequence
--> directed random-walk diffusion on the road graph
--> recurrent hidden-state update through DCGRU
--> encoder-decoder multi-step prediction
--> scheduled sampling to reduce exposure bias
+historical traffic speeds on sensors
+-> weighted directed road graph
+-> traffic flow as directed diffusion
+-> diffusion convolution for spatial dependency
+-> recurrent encoder-decoder for temporal dependency
+-> scheduled sampling for long-horizon forecasting
 ```
 
-交通直觉上，Euclidean closeness 不足以定义预测依赖。两个传感器地理距离很近，但如果位于不同道路、不同方向或不同交通流路径上，预测相关性可能很弱。相反，同一条 road segment 或同一 travel direction 上相隔更远的传感器，可能因为 congestion propagation 而具有更强的滞后依赖。
+关键 intuition 是：traffic spatial correlation is dominated by road network structure rather than Euclidean closeness。两个 sensor 在地图上很近，不代表它们的 traffic speed dynamics 相似；如果它们位于 opposite directions 或不同道路系统中，它们可能表现完全不同。相反，same-direction road sensors 即使 Euclidean distance 不最近，也可能因为处于同一交通传播路径上而高度相关。
 
-DCRNN 使用 directed random walk 来表达这种非对称传播：
+Introduction 中最重要的方向性直觉是：future speed can be more influenced by downstream traffic than upstream traffic。在某些交通场景中，下游拥堵会影响上游速度；在另一些场景中，上游流入也会影响下游状态。因此，traffic spatial structure 同时是 non-Euclidean and directional。
 
-- same-road same-direction sensors may be correlated；
-- opposite-direction nearby sensors may behave differently；
-- downstream traffic can influence future speed more strongly than upstream traffic，或者在某些场景中反向依赖也有预测价值；
-- bidirectional diffusion 允许模型同时利用 forward and backward random-walk neighborhoods。
-
-迁移到 PM2.5 或 air quality forecasting 时，直觉类似但 graph construction 更脆弱。地理距离本身不足以定义污染传播。Wind direction、wind speed、terrain、emission source regions、chemical transformation、lagged dependence 都可能决定 directed dependency。Directed diffusion 是有吸引力的 inductive bias，但只有当 W 近似 meaningful transport 或 predictive dependency 时，它才有解释价值。否则，模型可能只是学习到一个方便的相关性算子，而不是物理传播机制。
+这对 PM2.5 / air quality forecasting 的迁移启发很直接：geographic distance alone is insufficient。空气污染传播也不应只按欧氏距离建图；wind direction、wind speed、terrain、source regions、meteorology 和 lagged dependence 可能比几何邻近更重要。DCRNN 的 directed diffusion intuition 可以迁移，但前提是 `W` 近似真实 transport 或 predictive dependency。
 
 ## 5. Mathematical or Algorithmic Setup
 
@@ -377,38 +381,33 @@ W_{ij} = 0
 
 ## 8. Assumptions
 
+This section records only preliminary assumptions visible from the Introduction. Deeper assumptions from the full method and experiments remain pending until later sections are read closely.
+
 ### Data Assumptions
 
-- Sensor readings represent meaningful graph signals.
-- Road-network distance captures useful proximity for traffic prediction.
-- Missing values can be excluded from metrics without invalidating conclusions.
-- Train, validation, and test distributions are sufficiently comparable.
-- The observed sensor graph is representative of the deployment graph.
+- Traffic speed observations from road sensors can be treated as graph signals over a road network.
+- The underlying road network contains useful information about pairwise spatial correlations between sensors.
+- Historical traffic speeds contain enough signal to support multi-step future speed prediction.
+- Traffic data violates simple stationarity assumptions often used by classical time-series models.
 
-### Model Assumptions
+### Graph and Spatial Assumptions
 
-- Traffic dependency can be approximated by directed diffusion.
-- K-step diffusion is enough to capture relevant spatial propagation.
-- Bidirectional random walk captures upstream and downstream influence.
-- Static graph is adequate over the evaluation period.
-- Recurrent hidden states can capture nonlinear temporal dynamics.
-- Learned diffusion weights can compensate for imperfect but informative graph construction.
+- Road-network structure is more meaningful than Euclidean closeness for modeling traffic dependency.
+- Directionality matters: traffic influence can differ by travel direction and upstream/downstream relation.
+- A weighted directed graph is an appropriate inductive bias for representing sensor-to-sensor dependency.
+- Road-network distance is useful, but it is only a proxy for true traffic propagation.
 
-### Optimization and Computation Assumptions
+### Temporal Assumptions
 
-- Sparse graph structure makes `O(K|E|)` propagation feasible.
-- Scheduled sampling improves long-horizon robustness relative to pure teacher forcing.
-- End-to-end gradient training can learn useful diffusion filters.
-- Encoder-decoder recurrence is trainable at the chosen horizons and graph sizes.
+- Traffic dynamics are nonlinear and change with road conditions.
+- Recurrent sequence modeling is appropriate for capturing temporal dependency.
+- Long-horizon forecasting requires handling error accumulation, not only one-step prediction accuracy.
 
-### Evaluation Assumptions
+### Preliminary Reliability Assumptions
 
-- MAE, RMSE, and MAPE are sufficient forecasting metrics for the paper's main claims.
-- Performance on METR-LA and PEMS-BAY generalizes to traffic forecasting more broadly.
-- Better point prediction implies better model quality, even though uncertainty and decision reliability are not evaluated.
-- Excluding missing values from metric computation does not hide important robustness failures.
-
-For the current flagship project, the static-graph and point-forecasting assumptions are the most fragile under PM2.5, climate, energy, missingness, noise, and distribution shift.
+- Better point forecasting is not the same as calibrated uncertainty or robust decision reliability.
+- The Introduction motivates accuracy improvement, but does not yet establish robustness under missing sensors, noise, incidents, domain shift, or graph misspecification.
+- For PM2.5 and air quality transfer, graph construction assumptions become more fragile because wind, terrain, meteorology, and lagged transport may dominate raw distance.
 
 ## 9. Experimental Evidence
 
@@ -443,25 +442,22 @@ Important interpretation: the experiments support the importance of spatial diff
 
 ## 11. Research-Level Critique
 
-DCRNN 的强贡献在于问题重构：它把 traffic forecasting 从普通 multivariate forecasting 转为 directed graph signal sequence prediction。这一步比具体 architecture 更重要，因为它把 road direction、network topology、multi-step temporal dependence 放进同一个 modeling frame。
+At the Introduction level, DCRNN's strongest first move is the problem reframing from ordinary time series forecasting to directed graph signal sequence forecasting. This is a substantive modeling decision: once traffic is represented as graph signals on a weighted directed graph, the central question becomes whether the graph operator captures meaningful propagation.
 
-Diffusion convolution 的优点是 mathematically interpretable and computationally efficient。它既比 Euclidean CNN 更适合 non-grid sensor networks，也比对称 Laplacian filter 更贴近 directed traffic propagation。DCGRU 是一个干净的 architectural integration：不是把 spatial module 和 temporal module 简单串联，而是把 diffusion convolution 放进 GRU gates，使 hidden state 本身具有 graph-aware temporal memory。Scheduled sampling 也直接针对 long-horizon forecasting 中真实存在的 train-test mismatch。
+The Introduction makes a convincing case that Euclidean CNN and purely temporal models are structurally mismatched to road networks. It also correctly identifies long-horizon forecasting as a separate difficulty rather than treating multi-step prediction as repeated one-step prediction.
 
-但这篇论文也留下了一组关键研究问题：
+The critique starts with graph construction. A directed graph is an inductive bias, not a causal guarantee. Road-network distance is useful because roads constrain traffic movement, but it is still an incomplete proxy for true traffic propagation. Congestion, incidents, demand, signal timing, lane structure, weather, and time-of-day effects can alter dependencies in ways a static distance graph may not capture.
 
-- Is the directed transition matrix a meaningful propagation operator or just a convenient inductive bias?
-- How sensitive is performance to graph construction?
-- What happens when the graph changes over time?
-- Does better MAE imply reliable risk ranking?
-- Can the model know when it is uncertain?
-- Does bidirectional diffusion help prediction at the cost of physical interpretability?
-- What happens under missing sensors, sensor noise, road incidents, weather shifts, or domain shifts?
+DCRNN does not remove graph-construction risk; it makes graph construction more consequential because the directed transition matrix becomes the spatial propagation operator.
 
-关键批判句：
+Introduction-level reliability critique:
 
-> DCRNN does not remove graph-construction risk. It moves the risk from "is this undirected graph a meaningful geometry?" to "is this directed transition matrix a meaningful propagation operator?"
+- Better point forecasting does not automatically imply calibrated uncertainty, robustness, or decision reliability.
+- A model can improve MAE while still failing on rare incidents, sensor failures, long-horizon uncertainty, or high-risk node ranking.
+- Bidirectional diffusion may be predictively useful, but its physical meaning needs care: reverse diffusion can be a statistical dependency rather than a causal traffic-flow mechanism.
+- The Introduction motivates directed diffusion, but the validity of the directed transition matrix remains an empirical and conceptual question.
 
-对当前项目最重要的 critique 是：DCRNN 是强 forecasting backbone，但不是 reliability method。它优化 point prediction，并通过 graph diffusion 提高 deterministic accuracy；然而 reliable spatiotemporal forecasting 还需要知道预测什么时候失效、区间是否 calibrated、风险排序是否稳定、graph misspecification 是否可诊断。
+For current reading, the next test is to inspect Section 2.1 and 2.2: how exactly the paper defines diffusion convolution and how much of the Introduction's promise is encoded in the mathematical operator.
 
 ## 12. Connection to My Active Project
 
@@ -469,30 +465,30 @@ Related project:
 
 **Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift: Calibration, Uncertainty Quantification, and Risk-Aware Decision-Making**
 
-DCRNN 可以作为 directed spatiotemporal forecasting backbone。它适合作为 reliable forecasting experiments 的 baseline，因为它具备明确的 graph construction、directed diffusion、temporal recurrence 和 multi-horizon prediction 结构。对当前项目来说，它的价值不是直接解决 reliability，而是提供一个强但不完整的 point forecasting model，然后在其上研究 UQ、conformal calibration、shift evaluation 和 decision-level metrics。
+Introduction-level connection: DCRNN is a strong directed spatiotemporal forecasting backbone, but it should be treated as a point-forecasting backbone rather than a complete reliability method.
 
-Project-specific implications:
+For PM2.5 or air quality, the Introduction's core insight transfers well: Euclidean distance alone is insufficient. A PM2.5 graph should consider wind direction, wind speed, terrain, source regions, meteorology, and lagged dependence. The graph should encode plausible transport or predictive dependency, not merely geographic closeness.
 
-- Compare static distance graph vs wind-informed graph vs learned/adaptive graph.
-- Add graph perturbation tests.
-- Evaluate robustness under missingness, noise, and dynamic distribution shift.
-- Add Top-K high-risk node decision evaluation.
-- Add calibration and prediction interval coverage.
-- Add representation stability diagnostics.
+Project implications from the Introduction:
 
-PM2.5 迁移时，directed diffusion 可以用 wind-informed 或 meteorology-informed graphs 改造。例如，`W` 可以根据 wind direction、wind speed、source-to-sensor lag、terrain barrier、seasonal meteorological regime 构造。但 physical interpretation 只有在验证 `W` 是否对应 atmospheric transport 后才成立。否则，模型结果只能被视为 predictive correlation，而不能被解释为污染传播机制。
+- Use DCRNN as a baseline architecture for directed spatiotemporal forecasting.
+- Treat graph construction as a first-class experimental variable.
+- Compare distance-based graphs with wind-informed, meteorology-informed, lag-aware, and learned/adaptive graphs.
+- Extend the backbone with graph validation, uncertainty quantification, conformal calibration, shift testing, and risk-aware decision evaluation.
+- Evaluate not only MAE/RMSE, but also calibration, prediction interval coverage, Top-K high-risk node selection, and failure under distribution shift.
+
+The Introduction makes DCRNN valuable for the project because it gives a clean starting point for directed graph forecasting. The project should then ask what DCRNN does not answer: when the directed diffusion graph is wrong, when forecast uncertainty is high, and whether better point forecasts lead to better risk decisions.
 
 ## 13. Transferable Intuitions
 
-1. Directionality is not a detail; it can be the central inductive bias.
-2. Spatial proximity should be defined by propagation structure, not raw Euclidean distance.
-3. K-step locality is a modeling choice about receptive field and mechanism scale.
-4. A strong forecasting backbone is necessary but not sufficient for reliability.
-5. Graph quality is a hidden validity condition.
-6. Point prediction improvement does not guarantee calibrated risk or decision reliability.
-7. Bidirectional modeling may improve prediction while weakening physical causal interpretation.
-8. Long-horizon forecasting must explicitly handle train-test mismatch and error accumulation.
-9. Static graph models should be treated cautiously in systems whose dependency structure changes over time.
+1. Spatial proximity should be defined by propagation structure, not only geometric distance.
+2. Directionality can be a core inductive bias, especially when influence is asymmetric.
+3. Graph quality is a hidden validity condition: a graph neural forecasting model is only as meaningful as the dependency structure it receives or learns.
+4. Point prediction is not the same as reliability.
+5. Long-horizon forecasting requires handling train-test mismatch and error propagation.
+6. A road network, wind field, power grid, or climate mesh should not be treated as a generic adjacency matrix without domain validation.
+7. Modeling a system as diffusion is useful only when diffusion approximates the mechanism or at least a stable predictive dependency.
+8. Introduction-level problem framing often determines what later equations can and cannot solve.
 
 ## 14. Implementation Implications
 
@@ -520,43 +516,52 @@ Concrete implications for future implementation planning:
 
 ## 15. Possible Research Questions
 
+These are first-pass questions from the Introduction, not final full-paper research questions.
+
 | Question | Why It Matters | Minimal Test or Evidence Needed | Related Project Component |
 | --- | --- | --- | --- |
-| How sensitive is DCRNN performance to graph construction under dynamic distribution shift? | Graph construction is a hidden validity condition for directed diffusion | Compare distance, perturbed, reversed, and sparsified graphs under identical training setup | Graph validation and stress testing |
-| Does wind-informed directed graph improve PM2.5 forecasting over distance-based graph? | PM2.5 transport is directional and meteorology-dependent | Compare distance graph vs wind-informed graph on horizon-wise forecasting metrics | PM2.5 graph construction |
-| Can uncertainty estimation identify when directed diffusion forecasts are unreliable? | Point forecasts do not reveal failure confidence | Add ensemble, dropout, quantile, or conformal wrapper and evaluate uncertainty-error correlation | UQ extension |
-| Does conformal calibration remain valid under graph shift or meteorological shift? | Coverage guarantees may fail under non-exchangeable shift | Evaluate coverage before and after graph perturbation, seasonal split, or weather-regime split | Conformal calibration |
-| Does lower MAE translate to more stable Top-K high-risk node selection? | Decision-making often depends on risk ranking, not average error | Compare Top-K overlap, regret, and missed high-risk nodes across models | Risk-aware decision evaluation |
-| Can representation stability diagnose graph misspecification? | Hidden states may reveal when graph structure is wrong | Compare hidden-state drift under graph perturbation or wind-regime shift | Representation diagnostics |
-| Is bidirectional diffusion physically interpretable or only predictively useful in environmental systems? | Reverse diffusion may improve accuracy while harming causal interpretation | Compare forward-only, backward-only, and bidirectional variants with meteorological plausibility checks | Physical interpretability audit |
-| Should `W` be static, dynamic, learned, or hybrid for PM2.5 forecasting? | Environmental dependency changes with weather and time | Compare static distance, dynamic wind, adaptive learned, and hybrid graphs | Dynamic graph modeling |
+| How sensitive is DCRNN to graph construction quality? | The Introduction makes the directed graph central, so wrong graph structure may directly corrupt spatial propagation | Compare original, perturbed, sparsified, reversed, and random graphs under the same training setup | Graph validation |
+| Does a wind-informed directed graph improve PM2.5 forecasting over a distance-based graph? | Air pollution transport is directional and meteorology-dependent, so road-distance intuition must be adapted | Build distance graph and wind-informed graph; compare horizon-wise error and reliability metrics | PM2.5 graph construction |
+| Does better MAE imply better Top-K high-risk node selection? | Risk decisions may depend on ranking dangerous nodes, not average point error | Compare Top-K overlap, missed high-risk nodes, and decision regret across models | Risk-aware decision evaluation |
+| How does a static directed graph fail under dynamic meteorological shift? | DCRNN's Introduction motivates directed dependency, but environmental direction changes over time | Evaluate static graph under season, wind-regime, or weather-shift splits | Distribution-shift testing |
+| Can uncertainty or conformal calibration detect when directed diffusion forecasts become unreliable? | Point forecasts alone cannot identify failure or low-confidence horizons | Add UQ or conformal wrapper and test coverage/error under graph and weather shift | UQ and conformal calibration |
 
 ## 16. What I Should Be Able to Explain After Reading
 
-- Why traffic forecasting should be formulated as directed graph signal sequence forecasting.
-- Why Euclidean CNN is insufficient for road sensor networks.
-- Why undirected Laplacian convolution is less natural for traffic directionality.
-- What `D_O^{-1}W` and `D_I^{-1}W^T` mean.
-- How K-step diffusion convolution works.
-- Why the complexity is `O(K|E|)` on sparse graphs.
+After this Introduction pass, I should be able to explain:
+
+- Why the paper frames traffic forecasting as spatiotemporal graph forecasting instead of independent time-series forecasting.
+- What the three Introduction challenges are: complex spatial dependency, nonlinear temporal dynamics, and long-term forecasting difficulty.
+- Why ARIMA and Kalman filtering are limited by stationarity assumptions in this context.
+- Why deep learning models that ignore road-network structure miss spatial dependency.
+- Why Euclidean CNN is not natural for road sensor networks.
+- Why spectral graph convolution such as ChebNet is less natural for directional traffic influence.
+- Why traffic dependency is non-Euclidean and directional.
+- Why same-direction sensors may be correlated even when not closest by Euclidean distance.
+- Why opposite-direction nearby sensors may behave differently.
+- Why downstream traffic can influence future speed.
+- What DCRNN proposes at a high level: weighted directed graph, diffusion process, diffusion convolution, seq2seq recurrent modeling, and scheduled sampling.
+- Why graph construction risk remains central even before reading the method details.
+- How the Introduction motivates PM2.5 graph design beyond Euclidean distance.
+
+Later checks after reading Section 2.1 and 2.2:
+
+- What `D_O^{-1}W` and `D_I^{-1}W^T` mean mathematically.
+- How diffusion convolution is derived from directed random walks.
 - How DCGRU modifies GRU.
-- Why scheduled sampling is used.
-- What experiments support the value of spatial diffusion and temporal modeling.
-- What DCRNN does not solve for reliability.
-- How to adapt or critique DCRNN for PM2.5 forecasting.
-- Why graph construction risk is central to any directed diffusion model.
+- How scheduled sampling is actually parameterized.
 
 ## 17. Follow-Up Actions
 
 | Action | Target File or Project Component | Status |
 | --- | --- | --- |
-| Derive diffusion convolution by hand | Section 7 personal derivation notes | Planned |
-| Compare DCRNN with ChebNet and STGCN | P-ST-001 and graph convolution comparison notes | Planned |
-| Add terminology entries for directed diffusion, DCGRU, scheduled sampling, graph construction risk | Terminology tracking, if maintained separately | Pending |
-| Design graph perturbation tests for DCRNN-style backbone | Reliable forecasting experiment plan | Planned |
-| Design PM2.5 graph construction variants | Distance, wind-informed, dynamic, learned, hybrid graph plan | Planned |
-| Later compare with Graph WaveNet, AGCRN, MTGNN | Future spatiotemporal model notes | Pending |
-| Later add UQ/conformal extension plan | Calibration and uncertainty project design | Pending |
+| Read Section 2.1 carefully and verify the directed diffusion convolution derivation | Section 7 derivation notes | Planned |
+| Read Section 2.2 carefully and verify DCGRU plus encoder-decoder scheduled sampling | Section 7 and Section 16 method checks | Planned |
+| Compare Introduction's critique of Euclidean CNN and ChebNet with STGCN and ChebNet notes | P-ST-001 and P-GRAPH-001 comparison | Planned |
+| Add a graph-construction-risk note for PM2.5 transfer | Project graph validation notes | Planned |
+| Design a first graph perturbation thought experiment for DCRNN-style backbone | Future reliability experiment plan | Pending |
+| Track which claims are Introduction-level and which require full method/experiment verification | P-ST-002 deep-reading checklist | Pending |
+| Later compare with Graph WaveNet, AGCRN, and MTGNN after DCRNN method sections are read | Future spatiotemporal model notes | Pending |
 
 ## 18. Completion Criteria
 
