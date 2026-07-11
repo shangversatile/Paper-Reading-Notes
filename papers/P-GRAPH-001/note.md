@@ -43,7 +43,11 @@ This note was developed through an extended research-reading process before the 
 
 * Explain why non-parametric spectral filters are not localized.
 * Explain how polynomial filters produce K-hop locality.
-* Explain why Chebyshev recurrence avoids explicit eigendecomposition during filtering.
+* Distinguish graph structure processing from node signal processing.
+* Explain why the "frequency domain" in ChebNet means graph spectral domain, not temporal frequency.
+* Explain why $U$ and $\Lambda$ come from the graph Laplacian, while $\mathbf{x}$ or $X$ are the node input data.
+* Explain how $U^T\mathbf{x}$ projects a node signal onto graph Fourier modes.
+* Explain why ChebNet introduces the spectral domain but computes filters through Chebyshev polynomials in the node domain.
 * Explain how multi-feature graph convolution mixes input and output channels.
 * Explain why graph coarsening is preprocessing rather than learned hierarchy in the original paper.
 * Explain why graph quality is a reliability bottleneck.
@@ -145,6 +149,96 @@ A graph signal can be filtered by:
 This equation defines convolution-like filtering on a graph by using the Laplacian spectrum. It transforms the node signal $\mathbf{x}$ into graph-frequency space with $U^T$, modifies frequency components using $g_\theta(\Lambda)$, and reconstructs the filtered signal $\mathbf{y}$ with $U$. The filter is tied to the chosen graph because $L$, $U$, and $\Lambda$ all depend on $W$.
 
 For forecasting, this matters because the graph defines which spatial patterns are considered smooth, local, or high-frequency. A distance graph, a correlation graph, and a meteorological graph can induce different notions of graph frequency. However, P-GRAPH-001 itself solves the graph-domain convolution definition and efficient localized filtering problem; suitability for spatiotemporal forecasting comes from later models that combine spatial graph convolution with temporal modeling.
+
+## Clarification: Graph Structure Processing vs Node Signal Processing
+
+The Mathematical Setup and Spectral Filtering sections already give the main formulas. The short clarification here is about what is graph structure and what is node data.
+
+A common source of confusion is to describe the ChebNet transformation as "time domain to frequency domain." In this paper, the more accurate phrase is:
+
+```text
+node domain / vertex domain -> graph spectral domain / graph frequency domain
+```
+
+There is no regular time axis in a general graph. The "frequency" is defined by the graph Laplacian eigenbasis. Low graph frequencies correspond to graph signals that vary smoothly across connected nodes. High graph frequencies correspond to signals that change sharply across graph edges.
+
+The important separation is:
+
+1. the graph structure defines the geometry and the frequency basis;
+2. the node signal is the data being expanded, filtered, and reconstructed on that graph-defined basis.
+
+### Graph Structure Objects
+
+These objects are determined by the graph, not by a particular input signal:
+
+| Object | Comes From | Role |
+| --- | --- | --- |
+| `W` | graph edge weights | Encodes which nodes are connected and how strongly |
+| `D` | degree matrix from `W` | Normalizes graph connectivity |
+| `L` | graph Laplacian | Measures graph smoothness and defines the graph geometry |
+| `U` | eigenvectors of `L` | Graph Fourier basis |
+| `\Lambda` | eigenvalues of `L` | Graph frequencies |
+| `\tilde{L}` | rescaled Laplacian | Makes Chebyshev approximation numerically stable |
+| coarsening hierarchy | graph preprocessing | Defines multi-resolution graph structure for pooling |
+
+### Node Signal Objects
+
+These objects are the data living on the graph:
+
+| Object | Comes From | Role |
+| --- | --- | --- |
+| `x` | one scalar feature over all nodes | A graph signal in node domain |
+| `X` | multi-feature node input | Multiple graph signals or node feature channels |
+| `U^T x` | projection of `x` onto graph Fourier basis | Graph spectral coefficients |
+| `g_\theta(\Lambda)U^T x` | frequency-domain filtering | Amplifies or suppresses graph frequency components |
+| `Ug_\theta(\Lambda)U^T x` | inverse transform after filtering | Filtered graph signal back in node domain |
+| `T_k(\tilde{L})x` | Chebyshev recurrence applied to node signal | Efficient localized filtering without explicit eigendecomposition |
+
+### Core Transformation
+
+The graph Laplacian eigendecomposition is:
+
+```math
+L = U\Lambda U^\top
+```
+
+The graph Fourier transform of a node signal is:
+
+```math
+\hat{x} = U^\top x
+```
+
+The inverse transform is:
+
+```math
+x = U\hat{x}
+```
+
+A spectral graph filter is:
+
+```math
+y = Ug_\theta(\Lambda)U^\top x
+```
+
+This means:
+
+```text
+1. U^T x maps node-domain values into graph-frequency coefficients.
+2. g_theta(Lambda) modifies the coefficients frequency by frequency.
+3. U maps the filtered coefficients back to node-domain values.
+```
+
+ChebNet then avoids explicit eigendecomposition and explicit spectral transformation by approximating the filter with Chebyshev polynomials:
+
+```math
+Ug_\theta(\Lambda)U^\top x
+\approx
+\sum_{k=0}^{K-1}\theta_k T_k(\tilde{L})x
+```
+
+This is why the paper first introduces the graph spectral domain but later returns to a vertex-domain computation. The spectral view defines what graph convolution means; the Chebyshev view makes it localized, efficient, and implementable. See the Chebyshev Approximation section below for the computational form used by the layer.
+
+The graph defines the frequency basis; the node signal is projected onto that basis; the filter changes the signal's graph-frequency components; Chebyshev polynomials make the same idea computable directly in the node domain.
 
 ## Why Naive Spectral Filters Are Not Enough
 

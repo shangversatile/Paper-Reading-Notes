@@ -20,8 +20,11 @@
 | latent shift | Shift observed in learned latent states or embeddings. | Candidate |
 | graph Laplacian | In this project, the graph Laplacian defines how station adjacency shapes spatial smoothing or propagation. The chosen form must be documented because it changes the behavior of STGCN-style graph convolution. | Candidate |
 | normalized graph Laplacian | The normalized graph Laplacian rescales adjacency by node degree, reducing the influence of highly connected stations. It matters for fair spatial aggregation when station connectivity is uneven. | Candidate |
+| node domain | The node domain, or vertex domain, represents a graph signal by assigning values directly to graph nodes. | Candidate |
+| graph spectral domain | The graph spectral domain represents a graph signal by coefficients on the eigenvectors of the graph Laplacian. | Candidate |
 | graph smoothness | Graph smoothness measures how similar a graph signal is across connected nodes. It is not ordinary variance; it is local disagreement under the chosen graph structure, often measured by $\mathbf{x}^T L \mathbf{x}$. | Candidate |
 | graph frequency | Graph frequency is defined by the eigenvalues of the graph Laplacian. Small eigenvalues correspond to smooth graph modes, while large eigenvalues correspond to rapidly varying modes across graph edges. | Candidate |
+| graph Fourier basis | The graph Fourier basis is the set of Laplacian eigenvectors used to decompose node-domain graph signals into graph-frequency components. | Candidate |
 | graph Fourier modes | Graph Fourier modes are the eigenvectors of the graph Laplacian. They form an orthonormal basis for graph signals and represent independent patterns of variation induced by the graph structure. | Candidate |
 | graph Fourier transform | The graph Fourier transform represents a node-domain signal in the Laplacian eigenbasis. For a graph signal $\mathbf{x}$ and eigenvector matrix $U$, the transform is $\hat{\mathbf{x}}=U^T\mathbf{x}$. | Candidate |
 | orthogonal graph Fourier basis | An orthogonal graph Fourier basis is formed by the orthonormal eigenvectors of a symmetric graph Laplacian. In this case, the eigenvector matrix $U$ satisfies $U^{-1}=U^T$, so $U^T\mathbf{x}$ is the graph Fourier transform and $U\hat{\mathbf{x}}$ is the inverse transform. | Candidate |
@@ -49,6 +52,8 @@
 | output feature channel | An output feature channel is a learned graph signal produced by a graph convolutional layer. It is a coordinate of the hidden node representation, not an independent random variable. | Candidate |
 | multi-feature graph convolution | Multi-feature graph convolution maps multiple input graph signals to multiple output graph signals by applying graph filters to each input-output channel pair and summing over input channels. | Candidate |
 | channel mixing | Channel mixing refers to the learned combination of filtered input feature channels into output feature channels. In a standard graph convolutional layer, this mixing is linear before nonlinear activation. | Candidate |
+| graph structure processing | Graph structure processing constructs or transforms objects such as adjacency matrices, degree matrices, Laplacians, graph Fourier bases, and coarsening hierarchies. | Candidate |
+| node signal processing | Node signal processing applies graph-defined operators to the actual input values or features living on the nodes. | Candidate |
 | shared graph geometry | Shared graph geometry means that multiple input variables are filtered using the same graph Laplacian. This is efficient but may be unreliable if different variables have different spatial mechanisms. | Candidate |
 | spatial-channel shortcut | A spatial-channel shortcut occurs when a model relies on a graph-filtered input variable that is predictive in the training distribution but unstable under distribution shift. | Candidate |
 | channel-specific reliability risk | Channel-specific reliability risk refers to the possibility that one input feature channel, such as wind speed or humidity, is noisy, missing, shifted, or propagated through an inappropriate graph structure. | Candidate |
