@@ -188,12 +188,12 @@ These objects are determined by the graph, not by a particular input signal:
 
 | Object | Comes From | Role |
 | --- | --- | --- |
-| `W` | graph edge weights | Encodes which nodes are connected and how strongly |
-| `D` | degree matrix from `W` | Normalizes graph connectivity |
-| `L` | graph Laplacian | Measures graph smoothness and defines the graph geometry |
-| `U` | eigenvectors of `L` | Graph Fourier basis |
-| `\Lambda` | eigenvalues of `L` | Graph frequencies |
-| `\tilde{L}` | rescaled Laplacian | Makes Chebyshev approximation numerically stable |
+| $W$ | graph edge weights | Encodes which nodes are connected and how strongly |
+| $D$ | degree matrix from $W$ | Normalizes graph connectivity |
+| $L$ | graph Laplacian | Measures graph smoothness and defines the graph geometry |
+| $U$ | eigenvectors of $L$ | Graph Fourier basis |
+| $\Lambda$ | eigenvalues of $L$ | Graph frequencies |
+| $\tilde{L}$ | rescaled Laplacian | Makes Chebyshev approximation numerically stable |
 | coarsening hierarchy | graph preprocessing | Defines multi-resolution graph structure for pooling |
 
 ### Node Signal Objects
@@ -202,12 +202,12 @@ These objects are the data living on the graph:
 
 | Object | Comes From | Role |
 | --- | --- | --- |
-| `x` | one scalar feature over all nodes | A graph signal in node domain |
-| `X` | multi-feature node input | Multiple graph signals or node feature channels |
-| `U^T x` | projection of `x` onto graph Fourier basis | Graph spectral coefficients |
-| `g_\theta(\Lambda)U^T x` | frequency-domain filtering | Amplifies or suppresses graph frequency components |
-| `Ug_\theta(\Lambda)U^T x` | inverse transform after filtering | Filtered graph signal back in node domain |
-| `T_k(\tilde{L})x` | Chebyshev recurrence applied to node signal | Efficient localized filtering without explicit eigendecomposition |
+| $x$ | one scalar feature over all nodes | A graph signal in node domain |
+| $X$ | multi-feature node input | Multiple graph signals or node feature channels |
+| $U^\top x$ | projection of $x$ onto graph Fourier basis | Graph spectral coefficients |
+| $g_\theta(\Lambda)U^\top x$ | frequency-domain filtering | Amplifies or suppresses graph frequency components |
+| $Ug_\theta(\Lambda)U^\top x$ | inverse transform after filtering | Filtered graph signal back in node domain |
+| $T_k(\tilde{L})x$ | Chebyshev recurrence applied to node signal | Efficient localized filtering without explicit eigendecomposition |
 
 ### Core Transformation
 
