@@ -59,6 +59,14 @@ This note was developed through an extended research-reading process before the 
 * Explain why graph coarsening is preprocessing rather than learned hierarchy in the original paper.
 * Explain why graph quality is a reliability bottleneck.
 * Explain how this paper motivates graph construction validation for PM2.5 forecasting.
+* Explain what shared weights mean in ordinary convolution.
+* Explain why shared weights are trainable rather than fixed.
+* Explain how gradients for shared weights accumulate across all usages.
+* Explain what the shared parameters are in ChebNet.
+* Explain the forward pass of a Chebyshev graph convolution layer.
+* Explain how backpropagation updates Chebyshev filter coefficients.
+* Distinguish fixed graph-derived operators from trainable model parameters.
+* Explain why graph quality remains a modeling assumption even after training.
 
 ## Why This Paper Matters
 
@@ -3210,6 +3218,329 @@ A minimal Chebyshev graph convolution interface should make the graph assumption
 * Tests: shape preservation, $K$-hop locality, and deterministic output under a fixed graph.
 
 For the reliability project, implementation tests are not enough. The experimental protocol should later compare at least distance-based, correlation-based, and perturbed graph variants under forecasting error, coverage, sharpness, and decision-cost metrics.
+
+## Final Review Anchor: How ChebNet Is Actually Trained
+
+This section connects the mathematical definition of the Chebyshev graph filter to the actual training process: forward propagation, shared filter parameters, gradient accumulation, and parameter updates.
+
+### 1. Shared weights: what is shared and what is updated
+
+In convolutional models, shared weights do not mean fixed weights. They mean that the same parameter is reused across many positions, and all usages contribute to the same gradient update.
+
+For a one-dimensional convolution,
+
+```math
+y_i=\theta_{-1}x_{i-1}+\theta_0x_i+\theta_1x_{i+1}
+```
+
+the same parameters are reused at every position. For the next position,
+
+```math
+y_{i+1}=\theta_{-1}x_i+\theta_0x_{i+1}+\theta_1x_{i+2}
+```
+
+The parameters are shared across positions but still trainable.
+
+If the loss is
+
+```math
+\mathcal{L}=\sum_i \ell(y_i,t_i)
+```
+
+then the gradient for a shared parameter accumulates contributions from all positions:
+
+```math
+\frac{\partial \mathcal{L}}{\partial \theta_{-1}}
+=
+\sum_i
+\frac{\partial \mathcal{L}}{\partial y_i}
+x_{i-1}
+```
+
+The update is then applied once to the shared parameter:
+
+```math
+\theta_{-1}
+\leftarrow
+\theta_{-1}
+-
+\eta
+\frac{\partial \mathcal{L}}{\partial \theta_{-1}}
+```
+
+The key memory point is:
+
+```text
+A shared weight is not a non-updated weight. It is one trainable parameter reused many times, whose gradient is the sum of all usage-specific gradient contributions.
+```
+
+### 2. What shared weights mean in ChebNet
+
+In ChebNet, the shared parameters are not tied to ordered neighbor slots such as first neighbor or second neighbor. They are tied to Chebyshev polynomial orders and feature-channel mappings.
+
+For a single input channel, the Chebyshev graph filter is:
+
+```math
+y
+=
+\sum_{k=0}^{K-1}
+\theta_k T_k(\tilde{L})x
+```
+
+Here:
+
+```text
+T_0(L_tilde)x:
+    self information.
+
+T_1(L_tilde)x:
+    one-step graph-structured mixing.
+
+T_k(L_tilde)x:
+    degree-k graph-structured propagation term.
+
+theta_k:
+    shared coefficient for the k-th Chebyshev basis component.
+```
+
+The coefficient `theta_k` is shared across all nodes. It is not a separate parameter for each node, and it is not the weight of the k-th neighbor.
+
+For multiple input and output channels,
+
+```math
+Z_{:,q}
+=
+\sum_{p=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\Theta_{p,q,k}
+T_k(\tilde{L})X_{:,p}
+```
+
+where:
+
+```text
+p:
+    input feature channel.
+
+q:
+    output feature channel.
+
+k:
+    Chebyshev polynomial order.
+
+Theta_{p,q,k}:
+    shared trainable filter coefficient connecting input channel p to output channel q through order-k graph propagation.
+```
+
+This is the ChebNet analogue of CNN weight sharing.
+
+### 3. Forward pass
+
+A single ChebNet graph convolution layer can be understood as the following forward computation.
+
+First, graph structure is used to construct fixed graph operators:
+
+```math
+W,\quad D,\quad L,\quad \tilde{L}
+```
+
+Usually these are not trainable in the original ChebNet setup. They define the graph geometry and the propagation paths.
+
+Second, the input node features are propagated through Chebyshev bases:
+
+```math
+T_0(\tilde{L})X=X
+```
+
+```math
+T_1(\tilde{L})X=\tilde{L}X
+```
+
+```math
+T_k(\tilde{L})X
+=
+2\tilde{L}T_{k-1}(\tilde{L})X
+-
+T_{k-2}(\tilde{L})X
+```
+
+Third, the model combines these propagated signals using trainable shared coefficients:
+
+```math
+Z_{:,q}
+=
+\sum_{p=1}^{F_{\mathrm{in}}}
+\sum_{k=0}^{K-1}
+\Theta_{p,q,k}
+T_k(\tilde{L})X_{:,p}
+```
+
+Finally, an activation function produces the layer output:
+
+```math
+H=\sigma(Z)
+```
+
+The forward pass separates graph geometry from learnable filtering:
+
+```text
+Graph structure:
+    determines how information can propagate.
+
+Chebyshev basis signals:
+    provide different graph-propagation components.
+
+Theta:
+    learns how to combine these components for the task.
+```
+
+### 4. Backpropagation and gradient accumulation
+
+During backpropagation, the loss provides an error signal for every node and output channel:
+
+```math
+\frac{\partial \mathcal{L}}{\partial Z_{i,q}}
+```
+
+Because the same parameter `Theta_{p,q,k}` is used for every node, its gradient accumulates over all nodes:
+
+```math
+\frac{\partial \mathcal{L}}{\partial \Theta_{p,q,k}}
+=
+\sum_{i=1}^{N}
+\frac{\partial \mathcal{L}}{\partial Z_{i,q}}
+\left[T_k(\tilde{L})X_{:,p}\right]_i
+```
+
+With mini-batches, the gradient also accumulates over batch samples:
+
+```math
+\frac{\partial \mathcal{L}}{\partial \Theta_{p,q,k}}
+=
+\sum_b
+\sum_{i=1}^{N}
+\frac{\partial \mathcal{L}}{\partial Z^{(b)}_{i,q}}
+\left[T_k(\tilde{L})X^{(b)}_{:,p}\right]_i
+```
+
+Then the optimizer updates the shared parameter:
+
+```math
+\Theta_{p,q,k}
+\leftarrow
+\Theta_{p,q,k}
+-
+\eta
+\frac{\partial \mathcal{L}}{\partial \Theta_{p,q,k}}
+```
+
+This explains why all nodes update the same Chebyshev filter coefficient together. The parameter is shared in the forward pass, so its gradient is summed across all its usages in the backward pass.
+
+### 5. Does the graph operator get updated?
+
+In the original ChebNet setting, the graph operators are usually fixed:
+
+```text
+W, D, L, L_tilde:
+    fixed graph-derived objects.
+
+Theta:
+    trainable filter coefficients.
+
+Fully connected layers and biases:
+    trainable downstream parameters.
+```
+
+The graph structure determines the propagation geometry. The training process adjusts the filter coefficients and downstream neural-network weights.
+
+This distinction is important for reliability analysis: if the graph is poorly constructed, the model may learn reasonable coefficients over an invalid propagation geometry. Therefore, graph quality remains a modeling assumption rather than a solved problem.
+
+### 6. Training loop
+
+At model level, training follows the standard neural-network pipeline:
+
+```text
+for each epoch:
+    for each batch:
+        1. compute Chebyshev basis signals from X and L_tilde
+        2. combine them with shared trainable Theta
+        3. apply activation, pooling, and downstream layers
+        4. compute prediction
+        5. compute loss against labels or targets
+        6. backpropagate the loss
+        7. accumulate gradients for shared parameters
+        8. update parameters with an optimizer
+```
+
+The trainable components include:
+
+```text
+Chebyshev filter coefficients Theta;
+fully connected layer weights;
+bias terms;
+other trainable neural-network components if present.
+```
+
+The fixed graph components usually include:
+
+```text
+adjacency matrix W;
+degree matrix D;
+graph Laplacian L;
+rescaled Laplacian L_tilde;
+coarsening hierarchy, if precomputed.
+```
+
+### 7. ChebNet Training Flow
+
+```mermaid
+flowchart LR
+    subgraph G["Fixed graph structure"]
+        W["Adjacency W"] --> D["Degree D"]
+        D --> L["Graph Laplacian L"]
+        L --> Lt["Rescaled Laplacian L_tilde"]
+    end
+
+    subgraph F["Forward pass"]
+        X["Node features X"] --> T0["T0(L_tilde)X = X"]
+        X --> T1["T1(L_tilde)X"]
+        X --> TK["Tk(L_tilde)X by recurrence"]
+        Lt --> T1
+        Lt --> TK
+        T0 --> Basis["Chebyshev basis signals"]
+        T1 --> Basis
+        TK --> Basis
+        Basis --> Coeff["Shared filter coefficients Theta"]
+        Coeff --> Z["Linear graph convolution output Z"]
+        Z --> H["Activation, pooling, downstream layers"]
+        H --> Y["Prediction"]
+        Y --> Loss["Task loss"]
+    end
+
+    subgraph BWD["Backward pass"]
+        Loss --> dZ["Node-wise error signals"]
+        dZ --> dTheta["Gradient accumulated over nodes and batches"]
+        dTheta --> Update["Optimizer updates shared Theta"]
+        dZ --> dX["Gradient to previous layer"]
+    end
+
+    G --> F
+```
+
+### 8. CNN vs ChebNet analogy
+
+| CNN | ChebNet |
+| --- | --- |
+| fixed local grid window | graph-defined Chebyshev basis |
+| kernel weights shared across pixels | filter coefficients shared across nodes |
+| relative-position weights | polynomial-order and channel-mapping weights |
+| forward: local window weighted sum | forward: weighted sum of graph-propagated basis signals |
+| backward: gradients accumulated over pixels | backward: gradients accumulated over nodes and batches |
+| trainable kernel | trainable Chebyshev filter coefficients |
+
+### 9. One-sentence memory hook
+
+In ChebNet, the graph operator decides how information can move, the Chebyshev basis creates localized propagation components, and the shared trainable coefficients learn how to combine those components through task-level backpropagation.
 
 ## Final Paper-Level Summary
 
