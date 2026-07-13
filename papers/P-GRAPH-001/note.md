@@ -3493,39 +3493,73 @@ coarsening hierarchy, if precomputed.
 
 ### 7. ChebNet Training Flow
 
+The following diagram summarizes the separation between fixed graph structure, forward Chebyshev filtering, and task-driven parameter updates.
+
 ```mermaid
-flowchart LR
+flowchart TD
+    %% ---------- Fixed graph structure ----------
     subgraph G["Fixed graph structure"]
-        W["Adjacency W"] --> D["Degree D"]
-        D --> L["Graph Laplacian L"]
-        L --> Lt["Rescaled Laplacian L_tilde"]
+        W["Adjacency W (fixed)"]
+        D["Degree D (fixed)"]
+        L["Graph Laplacian L (fixed)"]
+        LT["Rescaled Laplacian L_tilde (fixed)"]
+        W --> D --> L --> LT
     end
 
-    subgraph F["Forward pass"]
-        X["Node features X"] --> T0["T0(L_tilde)X = X"]
-        X --> T1["T1(L_tilde)X"]
-        X --> TK["Tk(L_tilde)X by recurrence"]
-        Lt --> T1
-        Lt --> TK
-        T0 --> Basis["Chebyshev basis signals"]
-        T1 --> Basis
-        TK --> Basis
-        Basis --> Coeff["Shared filter coefficients Theta"]
-        Coeff --> Z["Linear graph convolution output Z"]
-        Z --> H["Activation, pooling, downstream layers"]
-        H --> Y["Prediction"]
-        Y --> Loss["Task loss"]
+    %% ---------- Forward computation ----------
+    subgraph F["Forward computation"]
+        X["Node features X"]
+        B0["Chebyshev basis signals"]
+        B1["T0(L_tilde)X = X"]
+        B2["T1(L_tilde)X"]
+        B3["Tk(L_tilde)X"]
+        TH["Trainable coefficients Theta"]
+        Z["Graph convolution output Z"]
+        H["Activation / pooling / downstream layers"]
+        Y["Prediction"]
+        LOSS["Task loss"]
+
+        X --> B0
+        LT --> B0
+        B0 --> B1
+        B0 --> B2
+        B0 --> B3
+        B1 --> Z
+        B2 --> Z
+        B3 --> Z
+        TH --> Z
+        Z --> H --> Y --> LOSS
     end
 
-    subgraph BWD["Backward pass"]
-        Loss --> dZ["Node-wise error signals"]
-        dZ --> dTheta["Gradient accumulated over nodes and batches"]
-        dTheta --> Update["Optimizer updates shared Theta"]
-        dZ --> dX["Gradient to previous layer"]
+    %% ---------- Backward update ----------
+    subgraph BWD["Backward update"]
+        DZ["Node-wise error signals"]
+        DTH["Accumulated gradient for Theta"]
+        DX["Gradient to previous layer"]
+        UPD["Optimizer update"]
+
+        LOSS --> DZ
+        DZ --> DTH --> UPD
+        DZ --> DX
     end
 
+    %% ---------- Parameter update loop ----------
     G --> F
+    UPD -. updates .-> TH
+
+    %% ---------- Styling ----------
+    classDef fixed fill:#eaf3ff,stroke:#5b8bd9,stroke-width:1.5px,color:#1f2d3d;
+    classDef forward fill:#edf8ee,stroke:#5a9b68,stroke-width:1.5px,color:#1f2d3d;
+    classDef train fill:#fff6dd,stroke:#c59a2e,stroke-width:1.5px,color:#1f2d3d;
+    classDef backward fill:#fdeeee,stroke:#d26a6a,stroke-width:1.5px,color:#1f2d3d;
+
+    class W,D,L,LT fixed;
+    class X,B0,B1,B2,B3,Z,H,Y forward;
+    class TH,UPD train;
+    class LOSS,DZ,DTH,DX backward;
 ```
+
+The key distinction is that the graph-derived operators define propagation geometry, while the shared trainable coefficients learn how to combine graph-propagation components through task-level supervision.
 
 ### 8. CNN vs ChebNet analogy
 
