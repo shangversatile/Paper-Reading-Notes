@@ -41,8 +41,13 @@ This note was developed through an extended research-reading process before the 
 
 ## Understanding Checklist
 
+* Explain why ordinary convolution can be viewed as frequency-domain multiplication.
+* Explain why graph convolution is hard to define directly in the node domain.
+* Explain what graph frequency means and why it is defined by the Laplacian.
+* Explain why arbitrary spectral filters are generally not localized.
 * Explain why non-parametric spectral filters are not localized.
-* Explain how polynomial filters produce K-hop locality.
+* Explain how polynomial filters create K-hop locality.
+* Explain what the Chebyshev filter does in the node domain.
 * Distinguish graph structure processing from node signal processing.
 * Explain why the "frequency domain" in ChebNet means graph spectral domain, not temporal frequency.
 * Explain why $U$ and $\Lambda$ come from the graph Laplacian, while $\mathbf{x}$ or $X$ are the node input data.
@@ -239,6 +244,238 @@ Ug_\theta(\Lambda)U^\top x
 This is why the paper first introduces the graph spectral domain but later returns to a vertex-domain computation. The spectral view defines what graph convolution means; the Chebyshev view makes it localized, efficient, and implementable. See the Chebyshev Approximation section below for the computational form used by the layer.
 
 The graph defines the frequency basis; the node signal is projected onto that basis; the filter changes the signal's graph-frequency components; Chebyshev polynomials make the same idea computable directly in the node domain.
+
+## Review Anchor: Spectral Filtering, Locality, and the Role of the Filter
+
+This section is a review anchor for the conceptual bridge from graph spectral filtering to localized Chebyshev graph convolution.
+
+### 1. Why ordinary convolution can be viewed in frequency space
+
+In ordinary signal processing, convolution in the original domain corresponds to multiplication in the frequency domain.
+
+```math
+\mathcal{F}(x*h)=\mathcal{F}(x)\cdot\mathcal{F}(h)
+```
+
+This means that a filter has two equivalent interpretations:
+
+```text
+Original-domain view:
+    a local weighted combination of neighboring signal values.
+
+Frequency-domain view:
+    a frequency-wise reweighting of signal components.
+```
+
+For example, a smoothing filter can be viewed as averaging nearby values in the original domain, or as suppressing high-frequency oscillations in the frequency domain.
+
+The important lesson for graph convolution is not merely computational convenience. It is that a filter can be defined by how it transforms the frequency components of a signal.
+
+### 2. Why graphs need a spectral definition of convolution
+
+Images have a regular grid. A 3-by-3 CNN kernel can refer to fixed relative positions such as left, right, up, down, and center.
+
+General graphs do not have this structure:
+
+```text
+nodes have different numbers of neighbors;
+neighbors have no canonical order;
+there is no translation operator;
+there is no fixed local window shared across all nodes.
+```
+
+Therefore, directly sliding a CNN-style kernel over graph neighborhoods is not well-defined.
+
+The spectral approach solves the definition problem by using the graph Laplacian eigenbasis as the graph Fourier basis.
+
+The eigendecomposition is:
+
+```math
+L=U\Lambda U^\top
+```
+
+The graph Fourier transform of a node signal is:
+
+```math
+\hat{x}=U^\top x
+```
+
+A spectral graph filter is:
+
+```math
+y=Ug_\theta(\Lambda)U^\top x
+```
+
+This equation should be read as:
+
+```text
+1. U^T x projects node-domain values into graph-frequency coefficients.
+2. g_theta(Lambda) reweights graph-frequency components.
+3. U maps the filtered coefficients back to node-domain values.
+```
+
+The spectral domain therefore provides a principled way to define a graph filter when there is no regular grid convolution.
+
+### 3. What graph frequency means
+
+Graph frequency is defined by the graph Laplacian, not by time.
+
+A low graph frequency corresponds to a signal that changes smoothly across connected nodes. A high graph frequency corresponds to a signal that changes sharply across graph edges.
+
+The smoothness energy is:
+
+```math
+x^\top Lx
+=
+\frac{1}{2}\sum_{i,j}W_{ij}(x_i-x_j)^2
+```
+
+In a PM2.5 graph, low-frequency components may correspond to region-level pollution trends, while high-frequency components may correspond to local spikes, sensor noise, sharp spatial boundaries, or localized pollution sources.
+
+### 4. Why arbitrary spectral filters are not local
+
+The spectral definition alone does not guarantee locality.
+
+If the filter is an arbitrary diagonal matrix in the graph spectral domain,
+
+```math
+g_\theta(\Lambda)
+=
+\mathrm{diag}(\theta_1,\theta_2,\ldots,\theta_n)
+```
+
+then the node-domain operator is:
+
+```math
+A=Ug_\theta(\Lambda)U^\top
+```
+
+and the filtered signal is:
+
+```math
+y=Ax
+```
+
+The matrix `A` is generally dense, so one node's output can depend on all graph nodes. This means that an arbitrary spectral filter may define a graph filter, but not a localized graph convolution.
+
+This is the key reason ChebNet does not stop at the generic spectral convolution formula.
+
+### 5. How polynomial filters create locality
+
+Locality appears when the spectral filter is constrained to be a polynomial of the Laplacian eigenvalues.
+
+```math
+g_\theta(\Lambda)
+=
+\sum_{k=0}^{K-1}\theta_k\Lambda^k
+```
+
+Substituting this into the spectral filter gives:
+
+```math
+Ug_\theta(\Lambda)U^\top x
+=
+U
+\left(
+\sum_{k=0}^{K-1}\theta_k\Lambda^k
+\right)
+U^\top x
+```
+
+Using the spectral decomposition of `L`, we have:
+
+```math
+U\Lambda^kU^\top=L^k
+```
+
+Therefore:
+
+```math
+Ug_\theta(\Lambda)U^\top x
+=
+\sum_{k=0}^{K-1}\theta_kL^kx
+```
+
+Since each multiplication by a graph operator can propagate information by at most one graph step, the maximum Laplacian degree determines the graph-hop range. A degree-K Laplacian polynomial produces a K-hop localized filter; in the paper's common K-term convention above, the largest explicit power is K-1.
+
+This is the conceptual bridge:
+
+```text
+spectral filter
+-> polynomial spectral filter
+-> polynomial of the graph Laplacian
+-> K-hop localized node-domain computation
+```
+
+### 6. What the Chebyshev filter does in practice
+
+ChebNet uses Chebyshev polynomial basis for numerical stability and efficient recursive computation.
+
+The rescaled Laplacian is:
+
+```math
+\tilde{L}
+=
+\frac{2}{\lambda_{\max}}L-I_n
+```
+
+The Chebyshev filter is computed as:
+
+```math
+y
+=
+\sum_{k=0}^{K-1}\theta_kT_k(\tilde{L})x
+```
+
+with recurrence:
+
+```math
+T_0(\tilde{L})x=x
+```
+
+```math
+T_1(\tilde{L})x=\tilde{L}x
+```
+
+```math
+T_k(\tilde{L})x
+=
+2\tilde{L}T_{k-1}(\tilde{L})x
+-
+T_{k-2}(\tilde{L})x
+```
+
+This implements the filter directly in the node domain without explicitly computing `U`, `Lambda`, or `U^T x`.
+
+Thus:
+
+```text
+Spectral view:
+    defines what a graph filter means.
+
+Polynomial view:
+    makes the filter localized.
+
+Chebyshev view:
+    makes the localized filter efficient and numerically stable.
+```
+
+### 7. Graph structure processing vs node signal processing
+
+The detailed object-level split is in the preceding clarification section. The compact review distinction is:
+
+| Category | Objects | Role |
+| --- | --- | --- |
+| Graph structure processing | `W`, `D`, `L`, `U`, `\Lambda`, `\tilde{L}` | Defines graph geometry, graph frequencies, and graph operators |
+| Node signal processing | `x`, `X`, `U^T x`, `g_\theta(\Lambda)U^T x`, `T_k(\tilde{L})x` | Applies graph-defined filters to the actual node values or node features |
+| Learnable filter parameters | `\theta_k` | Learn how to combine different graph-frequency or polynomial components |
+| Implementation pathway | Chebyshev recurrence | Computes localized filtering without eigendecomposition |
+
+The graph defines the frequency basis and the propagation geometry. The node signal is the data being projected, filtered, and reconstructed. The learnable parameters do not create the graph Fourier basis; they learn how to reweight graph-frequency or polynomial components.
+
+### 8. One-sentence memory hook
+
+Spectral filtering defines graph convolution; Laplacian polynomials give K-hop locality; Chebyshev recurrence makes the localized filter efficient in the node domain.
 
 ## Why Naive Spectral Filters Are Not Enough
 
