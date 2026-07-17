@@ -28,11 +28,14 @@ Paper IDs use the pattern:
 | P-CAUSALST | Causal spatiotemporal modeling | Causal discovery and latent mechanisms in time-dependent systems |
 | P-CAUSAL | General causal discovery and invariance | DAG learning, invariant prediction, causal structure learning |
 | P-MECH | Mechanism discovery | Governing equations, latent interactions, interpretable dynamics |
+| P-MECHINT | Mechanistic interpretability, feature emergence, circuits, grokking dynamics, and representation-level learning mechanisms | Internal neural-network mechanisms, learned features, circuits, representation formation, grokking dynamics |
 | P-DYN | Temporal dynamics modeling | Koopman methods, Neural CDE, continuous-time dynamics |
 | P-CLIMATE | Climate forecasting | Climate-specific forecasting and generative modeling |
 | P-SCIAGENT | Scientific agent reasoning | Scientific agents, weather reasoning, tool-augmented scientific AI |
 | P-TS | General time-series forecasting | Temporal Fusion Transformer and applied multi-horizon forecasting |
 | P-CAL | Calibration | Neural network calibration, temperature scaling, monitoring-oriented calibration |
+
+P-MECH and P-MECHINT are separate taxonomy prefixes. P-MECH means discovering mechanisms in external systems or dynamic processes. P-MECHINT means interpreting mechanisms inside neural networks and learning dynamics.
 
 ## Design Principles
 
