@@ -4,6 +4,147 @@
 > The goal is not to summarize a paper mechanically, but to extract understanding,
 > assumptions, limitations, transferable ideas, and research questions.
 
+## Research Notebook Principle
+
+这个模板不是为了写浅层 paper summary。
+
+一篇 research-level paper note 不应该只是回答：
+
+"What did the authors do?"
+
+它应该回答：
+
+1. 这篇 paper 如何 formulate the problem？
+2. 为什么这种 formulation 在数学上或科学上是 natural 的？
+3. 哪些 assumptions 使这个 formulation valid？
+4. 引入了哪些 mathematical objects？
+5. 关键 equations 在 mechanism 上意味着什么？
+6. 这些 equations 如何连接到 implementable computation？
+7. 这个 model 编码了哪些 inductive biases？
+8. 哪些 failure modes 会从这些 assumptions 中产生？
+9. 在 noise、missingness、distribution shift、graph shift 或 deployment constraints 下，method 会如何表现？
+10. 哪些 ideas 可以 transfer 到我自己的 research projects？
+11. 这篇 paper 提出了哪些新的 research questions 或 experiments？
+
+对于每个 central model component 或 equation，在适用时使用以下 reasoning chain：
+
+Problem
+→ Motivation
+→ Mathematical object
+→ Derivation
+→ Mechanistic intuition
+→ Implementation implication
+→ Assumption
+→ Failure mode
+→ Project transfer
+→ Research question
+
+一篇 paper note 只有在能帮助未来的我重新 reconstruct paper 的 core idea、解释它的 mathematical logic、识别 hidden assumptions、critique 它的 limitations，并把它转化为 research action 时才有用。
+
+## Equation Reading Standard
+
+对于每个 structurally important equation，不要只复制 formula。
+
+需要解释：
+
+1. 为什么这个 equation 会出现。
+2. 它解决了什么 problem。
+3. 每个 symbol 的 formal meaning 是什么。
+4. 每个 symbol 的 intuitive meaning 是什么。
+5. 这个 equation 如何从前面的 definitions 推导出来。
+6. 这个 equation 暗含了什么 computation。
+7. 哪个 assumption 会破坏这个 equation 的 usefulness。
+8. 这个 equation 如何连接到 active research project。
+
+每个 important equation 都应该按照以下链条阅读：
+derivation → intuition → implementation → critique → transfer。
+
+## Model Reading Standard
+
+对于每个 important model component，需要解释：
+
+1. 它解决了之前的哪个 bottleneck。
+2. 为什么 simpler baseline 不够。
+3. 它引入了什么 inductive bias。
+4. 这个 component 计算了什么。
+5. 什么 information flows through it。
+6. 它对 data、structure、time、causality 或 noise 做了什么 assumptions。
+7. 如果这些 assumptions fail，会发生什么。
+8. 这个 component 如何被 tested、ablated 或 stress-tested。
+9. 它如何在我自己的 research 中被 reused 或 modified。
+
+## Research Critique Standard
+
+critique section 不能只是 generic limitations list。
+
+它应该讨论：
+
+1. paper 中最强的 idea。
+2. 使 method work 的 hidden assumption。
+3. 最可能出现的 failure mode。
+4. predictive performance 与 reliability 之间的 gap。
+5. method 提供的是 understanding、control、calibration，还是 only accuracy。
+6. 这篇 paper 让什么问题更容易研究。
+7. 这篇 paper 留下了什么 unresolved。
+8. 如果我要 extend 这篇 paper，下一步应该运行什么 experiment。
+
+## Project Transfer Standard
+
+当把 paper 连接到我的 active project 时，避免 forced connections。
+
+对于 relevant papers，需要明确判断这篇 paper 是否贡献了：
+
+- forecasting backbone；
+- graph construction idea；
+- uncertainty estimation method；
+- calibration method；
+- distribution-shift evaluation protocol；
+- robustness stress test；
+- decision-reliability metric；
+- representation diagnostic；
+- mechanism-discovery idea；
+- implementation pattern；
+- 或 failure mode。
+
+对于当前 flagship project：
+
+Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift:
+Calibration, Uncertainty Quantification, and Risk-Aware Decision-Making
+
+note 应该说明这篇 paper 是否帮助：
+
+- reliable forecasting backbone；
+- graph construction validation；
+- uncertainty quantification；
+- conformal calibration；
+- missingness/noise/shift robustness；
+- Top-K high-risk decision evaluation；
+- representation stability；
+- model monitoring；
+- 或 risk-aware decision-making。
+
+## Completion Discipline
+
+不要仅仅因为 note 填满了全部 18 个 sections 就把 paper 标记为 Completed。
+
+只有在满足以下条件时，paper 才能被标记为 Completed：
+
+1. 我可以不看材料解释 core problem。
+2. 我可以在 high level 上 reconstruct key mathematical logic。
+3. 我可以 mechanistically 解释 main model components。
+4. 我理解 assumptions 和 failure modes。
+5. 我可以区分 paper 证明了什么、experiments 支持了什么、以及什么仍然 untested。
+6. 我可以在不 forced connection 的情况下把 paper 连接到我的 project。
+7. 我已经提取了至少一个有用的 research question、experiment 或 implementation implication。
+8. note 已经通过 rendering 和 repository checks。
+
+在此之前，将 status 保持为：
+Reading
+或
+Revisit Needed
+
+具体取决于 understanding 的深度。
+
 ---
 
 # <Paper ID>: <Paper Title>
