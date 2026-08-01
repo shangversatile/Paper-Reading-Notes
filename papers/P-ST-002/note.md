@@ -96,6 +96,8 @@ Future depends on both history and propagation structure
 
 Section 2.2 的核心作用是：把 Section 2.1 中的 graph `G=(V,E,W)` 从 structural prior 转化为 spatial propagation operator。也就是说，`G` 不再只是说明 sensor 之间“有连接”，而是通过 directed random-walk transition matrix 定义信息如何沿 road network 扩散、聚合并进入后续预测模型。
 
+Section 2.3 的核心作用则是：把这个 spatial operator 放进 recurrent state transition。关键动作不是再添加一个独立 temporal model，而是把 GRU 中的 dense matrix multiplications 替换为 diffusion convolution，从而形成 DCGRU。这样，reset gate、update gate、candidate state 和 hidden-state update 都变成 graph-aware 的 temporal computation。
+
 | Object | Formal Role | Research Intuition |
 | --- | --- | --- |
 | `G = (V, E, W)` | Weighted directed graph | 不是 observation，而是关于 dependency structure 的 structural inductive bias |
@@ -118,6 +120,16 @@ Section 2.2 的核心作用是：把 Section 2.1 中的 graph `G=(V,E,W)` 从 st
 | `Theta` | Multi-channel diffusion parameters | channel、step、direction 共同参数化 graph filter |
 | diffusion convolution | Directed graph spatial operator | 用 directed diffusion 替代 Euclidean convolution 或 undirected graph convolution |
 | sparse transition multiplication | Efficient implementation primitive | 不显式形成 dense matrix powers，而是递推传播 |
+| `H(t-1)` | Previous recurrent hidden state | 所有节点在上一时刻的 graph-aware temporal memory |
+| `[X(t), H(t-1)]` | Feature/channel concatenation at each node | 拼接 input features 和 hidden channels，但不改变 node dimension |
+| `r(t)` | Reset gate | 决定上一时刻记忆中哪些部分应在构造 candidate state 前被清除 |
+| `u(t)` | Update gate | 决定保留旧 hidden state 还是采用 new candidate state |
+| `C(t)` | Candidate state | 当前观测和 reset-filtered memory 共同生成的新 graph-aware memory |
+| DCGRU | Diffusion-convolutional GRU cell | 用 diffusion convolution 替代 GRU 的 dense affine maps |
+| encoder | Historical sequence summarizer | 读入 historical graph signals 并产生 decoder 初始状态 |
+| decoder | Future sequence generator | 自回归生成 future graph signals |
+| `epsilon_i` | Scheduled sampling teacher-forcing probability | 训练第 `i` 次迭代时使用 ground truth previous output 的概率 |
+| `tau` | Inverse-sigmoid decay parameter | 控制 scheduled sampling 从 teacher forcing 转向 model prediction 的速度 |
 
 Graph:
 
@@ -167,26 +179,53 @@ ChebNet 主要使用 undirected graph Laplacian 和 localized spectral filtering
 
 对 PM2.5 / air-quality forecasting，这个 setup 不能直接把 `W_{ij}` 当成 geographic distance 的函数。`W` may need to be wind-informed, terrain-informed, meteorology-informed, source-aware, lag-aware, causal, learned, dynamic, or hybrid。否则 Section 2.2 的 directed diffusion operator 只会在错误传播结构上高效计算。
 
+Section 2.3 then turns diffusion convolution from a spatial operator into a spatiotemporal recurrent model. Ordinary GRU can model temporal dependency, but it does not naturally know the road graph. If all sensors are flattened into one vector, dense transformations can learn cross-sensor correlations, but they do not encode directed local diffusion, k-step graph reachability, or separate forward/backward propagation. DCGRU fixes this by making every recurrent gate a diffusion-convolutional gate.
+
+At time `t`, the input graph signal and previous hidden state are node-aligned matrices:
+
+```math
+X^{(t)} \in \mathbb{R}^{N \times P}
+```
+
+```math
+H^{(t-1)} \in \mathbb{R}^{N \times Q}
+```
+
+The concatenated gate input is:
+
+```math
+[X^{(t)}, H^{(t-1)}] \in \mathbb{R}^{N \times (P+Q)}
+```
+
+This concatenation is along the feature/channel dimension at each node. It is not node mixing. Node mixing happens only when diffusion convolution applies the forward and backward transition matrices. The implementation implication is strict: preserve the node dimension `N` throughout recurrent computation, concatenate channels only, and use the same graph transition operators inside every DCGRU gate.
+
+Mechanistically, DCGRU can be read as a graph-conditioned state transition: current node observations and previous node memories are first arranged as graph signals, then directed diffusion propagates local context before the nonlinear recurrent gates decide what to reset, retain, and update. This is the point where Section 2.2's spatial operator becomes Section 2.3's temporal dynamics model.
+
 ## 6. Method: Step-by-Step Logic
 
-Current scope: Section 2.2 Spatial Dependency Modeling. DCGRU and temporal dynamics belong to the next reading step and are not expanded here.
+Current scope: Section 2.3 Temporal Dynamics Modeling. The existing Section 2.2 notes explain diffusion convolution as the spatial operator; this pass explains how the paper turns that operator into DCGRU, a graph-aware recurrent unit for sequence-to-sequence forecasting.
 
-1. Start from the graph forecasting formulation in Section 2.1: historical graph signals plus `G=(V,E,W)` should determine future graph signals.
-2. Identify why a simpler spatial formulation is insufficient. Independent time series ignore spatial dependency; dense multivariate models ignore road topology; ChebNet-style undirected Laplacian filtering does not naturally preserve directional and asymmetric traffic influence.
-3. Treat traffic flow as a directed random-walk diffusion process. This turns spatial modeling from symmetric smoothing into directed propagation.
-4. Introduce the out-degree matrix `D_O` and forward transition matrix `P_f`. Mechanistically, `P_f` tells how signal mass leaves one node and reaches outgoing neighbors.
-5. Use powers of `P_f` to represent k-step directed reachability. A two-step term sums over all directed intermediate nodes, so proximity means reachability through directed paths rather than Euclidean distance.
-6. Begin from the random-walk-with-restart intuition, where longer paths receive decaying weights, then truncate the process to finite `K` steps for computation.
-7. Replace fixed restart weights with learnable parameters. This converts a Markov diffusion process into a learnable graph filter and lets the model decide which step lengths matter.
-8. Add the reversed transition matrix `P_b` so the model can use both forward and backward directed dependencies. This improves flexibility, but reverse diffusion should not automatically be interpreted as physical causality.
-9. Combine forward and backward K-step basis functions into bidirectional diffusion convolution for each feature channel, then sum across channels to produce each output channel.
-10. Compute diffusion recursively with sparse transition multiplications instead of explicitly forming dense matrix powers.
+1. Start from ordinary GRU as the simpler temporal baseline. GRU handles nonlinear temporal memory with reset and update gates, but its dense transformations treat the sensor vector as an unstructured set of coordinates.
+2. Identify why that is insufficient for traffic forecasting. Flattening all sensors ignores road topology, directed local diffusion, upstream/downstream asymmetry, and k-step spatial propagation. Dense matrices can learn correlations, but they do not encode the graph as a first-class propagation structure.
+3. Carry forward Section 2.2's diffusion convolution. The graph `G` and its forward/backward transition powers now replace the dense affine maps inside the recurrent gates.
+4. Represent the current observation as `X(t)` over all nodes and the previous memory as `H(t-1)` over all nodes. Both objects preserve node dimension `N`.
+5. Concatenate `X(t)` and `H(t-1)` along the feature/channel dimension at each node. This gives each gate both current local evidence and previous temporal memory without mixing node identities before graph diffusion.
+6. Compute the reset gate using diffusion convolution. The reset decision is no longer only a local dense transformation; it can depend on directed diffusion context around each node.
+7. Compute the update gate using diffusion convolution. The retain-versus-update decision can respond to current traffic at a node and to nearby directed graph conditions.
+8. Construct the candidate state from current input and reset-filtered hidden memory. The reset gate filters stale or irrelevant memory before the candidate state is produced.
+9. Update hidden state by interpolating between old memory and new candidate state. Large update-gate values keep slow-changing dynamics; small values allow abrupt adaptation.
+10. Interpret DCGRU as a graph-conditioned state transition function. The graph controls how previous node states diffuse before nonlinear temporal dynamics are computed.
+11. Wrap DCGRU in an encoder-decoder architecture. Historical graph signals are read by the encoder; final encoder states initialize the decoder; the decoder generates future graph signals step by step.
+12. Treat multi-step forecasting as sequence generation rather than independent horizon prediction. Each decoder step conditions on the previous generated or ground-truth graph signal.
+13. Add scheduled sampling to reduce train-test mismatch. During training, the decoder sometimes receives ground truth previous observations; during testing, it must rely on its own previous predictions.
+14. Decay the teacher-forcing probability during training. Early iterations stabilize learning with ground truth inputs; later iterations expose the model to its own predictions.
+15. Keep the reliability caveat explicit. DCGRU improves deterministic spatiotemporal modeling, but scheduled sampling does not provide uncertainty, calibration, robustness guarantees, or protection against graph shift, missingness, incidents, weather shift, or deployment distribution shift.
 
-The inductive-bias shift is the key point. DCRNN does not merely implement graph convolution differently; it changes the spatial assumption from undirected local smoothness to directed diffusion over a Markov transition operator. This is natural for road traffic because congestion and speed influence can be directional and asymmetric. It is only conditionally transferable to PM2.5: if `W` does not reflect wind, terrain, sources, lag, meteorology, or dynamic regimes, the same directed diffusion machinery can propagate misleading information.
+For PM2.5 transfer, the same logic suggests modeling each monitoring station's hidden state as graph-aware temporal memory. If `W` is wind-informed, hidden states can aggregate upwind/downwind context. But PM2.5 dynamics also depend on dynamic meteorology, emissions, deposition, chemistry, missingness, and exogenous forcing, so a static deterministic DCGRU should be treated as a backbone rather than a reliability solution.
 
 ## 7. Key Equations and Derivations
 
-This section currently covers Section 2.2 Spatial Dependency Modeling. It is a first-pass research-grade reading note for diffusion convolution only; Section 2.3 Temporal Dynamics Modeling and DCGRU remains a follow-up reading step.
+This section covers Section 2.2 Spatial Dependency Modeling and now adds Section 2.3 Temporal Dynamics Modeling. The Section 2.3 focus is DCGRU: replacing the dense affine maps in GRU with diffusion convolution so that every recurrent gate is conditioned on the directed graph.
 
 ### A. Section 2.2 Role
 
@@ -387,9 +426,171 @@ Both methods still depend on graph quality. If the graph is wrong, ChebNet smoot
 | Multi-channel layer | Generalizes diffusion to feature transformations | Combines channels, directions, and diffusion depths | More parameters can overfit graph-specific artifacts |
 | Sparse recursion | Makes K-step diffusion implementable | Repeated sparse transition multiplication | Missing values or bad masks can be repeatedly diffused |
 
+### M. Section 2.3 Role
+
+Section 2.3 turns diffusion convolution from a spatial operator into a spatiotemporal recurrent model. The problem is that traffic forecasting requires both nonlinear temporal memory and directed spatial propagation. Section 2.2 supplies the graph diffusion operator, but diffusion convolution alone does not maintain temporal state. Ordinary GRU supplies temporal state, but ordinary GRU does not know the road graph. DCGRU merges the two by replacing GRU's dense matrix multiplications with diffusion convolution.
+
+The mathematical object introduced is a recurrent cell whose gates are graph filters. Instead of applying a dense transformation to `[X(t), H(t-1)]`, the cell applies `Theta star_G` to graph signals. Mechanistically, previous node states can diffuse through the directed graph before the gates decide what to reset, retain, or write. The implementation must therefore store the hidden state as an `N x Q` graph signal, not as an unstructured hidden vector detached from node identities.
+
+### N. Why Ordinary GRU Is Insufficient
+
+Ordinary GRU models temporal dependency, but it is spatially agnostic unless the graph is manually encoded into the input. If all sensors are treated as a flat vector, the model can learn dense cross-sensor interactions, but those interactions do not naturally respect road topology, directionality, sparsity, or local diffusion depth. Dense transformations also make it harder to distinguish upstream, downstream, reverse-path, and disconnected dependencies.
+
+DCGRU solves this by making every recurrent gate graph-aware. The reset gate, update gate, and candidate-state construction all use directed diffusion convolution. This means a node's temporal transition is conditioned not only on its own current value and previous memory, but also on information propagated through nearby directed graph context. The assumption is that the provided graph is a valid or at least useful predictive diffusion structure. Under incidents, road closures, missing sensors, weather shift, or deployment graph shift, that assumption may fail.
+
+### O. Input and Hidden State Objects
+
+The current graph signal is:
+
+```math
+X^{(t)} \in \mathbb{R}^{N \times P}
+```
+
+The previous hidden state is:
+
+```math
+H^{(t-1)} \in \mathbb{R}^{N \times Q}
+```
+
+The concatenated input to the gates is:
+
+```math
+[X^{(t)}, H^{(t-1)}] \in \mathbb{R}^{N \times (P+Q)}
+```
+
+`N` is the number of nodes. `P` is the number of input feature channels per node. `Q` is the number of hidden channels per node. `[X^{(t)}, H^{(t-1)}]` means feature/channel concatenation at each node, not node mixing. Node identity is preserved row by row. Spatial mixing occurs only when diffusion convolution applies graph transition powers.
+
+The implementation must store `X^{(t)}` and `H^{(t-1)}` with the same node ordering as `W`, concatenate them along the channel dimension, and pass the result through the same forward/backward diffusion machinery used in Section 2.2. If missingness masks or sensor ordering are wrong, the recurrent gates may diffuse invalid memory into neighboring nodes.
+
+### P. Reset Gate
+
+The DCGRU reset gate is:
+
+```math
+r^{(t)}
+=
+\sigma
+\left(
+\Theta_r \star_G [X^{(t)}, H^{(t-1)}] + b_r
+\right)
+```
+
+`r^{(t)}` decides how much previous memory should be reset. `sigma` maps the gate to values between 0 and 1. `Theta_r` is the learnable diffusion-convolution parameter for the reset gate. `b_r` is the reset-gate bias. `star_G` means the gate is computed through graph diffusion rather than a dense affine map.
+
+The simpler GRU reset gate is insufficient because it does not naturally condition reset decisions on directed local graph context. In DCGRU, a node can decide to forget stale memory based on its own current observation, its previous hidden state, and nearby forward/backward diffusion context. Mechanistically, if congestion information or a sudden speed change diffuses into a node's neighborhood, the reset gate can suppress old memory before constructing the candidate state.
+
+For PM2.5, a graph-aware reset gate could help a station discard stale local memory when upwind stations or meteorological neighbors indicate a regime change. The risk is that static `W` may propagate the wrong upwind/downwind context under changing wind direction, missing sensors, chemical transformation, or exogenous emission shocks.
+
+### Q. Update Gate
+
+The DCGRU update gate is:
+
+```math
+u^{(t)}
+=
+\sigma
+\left(
+\Theta_u \star_G [X^{(t)}, H^{(t-1)}] + b_u
+\right)
+```
+
+`u^{(t)}` controls how much old hidden state is retained. `Theta_u` and `b_u` are the update-gate diffusion parameters and bias. If `u^{(t)}` is large, the previous hidden state dominates the next state. If it is small, the candidate state dominates. In DCGRU, this retain-versus-adapt decision is conditioned on directed spatial diffusion.
+
+The previous simpler formulation is insufficient because a dense temporal gate can learn temporal persistence but does not encode that persistence should vary by graph context. In traffic, a node may keep its old memory when neighboring directed conditions remain stable, but adapt quickly when upstream or downstream diffusion context changes. The gate therefore couples temporal inertia with graph-propagated evidence.
+
+For air quality, the update gate suggests a useful mechanism: slow-changing pollution regimes can be retained, while abrupt events can trigger adaptation if graph-neighbor and meteorological covariates indicate incoming change. Without uncertainty or dynamic graphs, however, the model may retain a wrong hidden state confidently during unseen weather or emission regimes.
+
+### R. Candidate State
+
+The DCGRU candidate state is:
+
+```math
+C^{(t)}
+=
+\tanh
+\left(
+\Theta_C \star_G [X^{(t)}, r^{(t)} \odot H^{(t-1)}] + b_C
+\right)
+```
+
+`C^{(t)}` is the proposed new hidden state. `r^{(t)} \odot H^{(t-1)}` means the reset gate filters previous hidden memory elementwise before candidate construction. `Theta_C` and `b_C` are the candidate-state diffusion parameters and bias. `tanh` bounds the candidate representation.
+
+The derivation follows the ordinary GRU idea: first decide what memory to reset, then build a candidate state from current input and filtered previous memory. DCGRU changes the affine map into diffusion convolution, so the candidate state can use spatially propagated context. This lets a node's new memory depend on graph-neighbor conditions before it is mixed into the hidden state.
+
+The implementation must compute `r^{(t)}` before candidate construction, multiply it elementwise with `H^{(t-1)}`, concatenate that reset-filtered memory with `X^{(t)}`, and then run diffusion convolution. If missing hidden entries are not masked, the candidate state can turn missingness into spatially propagated signal.
+
+### S. Hidden State Update
+
+The hidden state update is:
+
+```math
+H^{(t)}
+=
+u^{(t)} \odot H^{(t-1)}
++
+(1-u^{(t)}) \odot C^{(t)}
+```
+
+This equation should be read as a gate-controlled interpolation between old memory and new candidate state. If `u^{(t)}` is large, old memory dominates. If `u^{(t)}` is small, the candidate state dominates. This supports both slow-changing dynamics and abrupt changes.
+
+The state update itself is elementwise, but the quantities being interpolated have already been produced by graph-aware gates. The temporal state therefore remains node-aligned while its gate values encode directed diffusion context. The assumption is that nonlinear recurrent memory plus finite graph diffusion can summarize the relevant history. This can fail under long-range delayed effects, unobserved exogenous drivers, missing nodes, corrupted sensors, or distribution shift.
+
+### T. Graph-Conditioned State Transition
+
+DCGRU can be understood as a graph-conditioned state transition function:
+
+```math
+H^{(t)}
+=
+F_G
+\left(
+X^{(t)}, H^{(t-1)}; W
+\right)
+```
+
+`F_G` denotes the recurrent transition induced by the graph `G`, diffusion-convolution parameters, and nonlinear gates. The temporal state transition depends on the graph. Previous node states diffuse through the directed graph before reset, update, and candidate computations are formed. This couples spatial propagation with nonlinear temporal dynamics.
+
+The transferable intuition is that the graph is not merely a preprocessing artifact. It defines which histories can influence which future hidden states. A research question follows directly: under graph shift, does the same state transition remain valid, or does graph-aware gating amplify outdated propagation assumptions?
+
+### U. Encoder-Decoder Architecture
+
+DCRNN uses an encoder-decoder architecture for multi-step forecasting. Historical graph signals are fed into the encoder. The encoder final states initialize the decoder. The decoder generates future graph signals step by step. Both encoder and decoder use DCGRU.
+
+This treats multi-step forecasting as sequence generation, not independent horizon prediction. The advantage is that temporal dependencies across future horizons can be modeled recursively. The cost is that decoder errors can accumulate because later predictions condition on earlier generated outputs. The implementation must store encoder hidden states, initialize decoder hidden states from them, and run the decoder for the required forecasting horizon.
+
+For PM2.5, this architecture is attractive because future pollution levels are not independent across horizons. But recursive decoding can still compound errors during sudden meteorological shifts, source changes, sensor outages, or rare high-pollution events.
+
+### V. Scheduled Sampling
+
+During training, the decoder may receive ground truth previous observations. During testing, the decoder must use its own previous predictions. This train-test input mismatch can cause exposure bias and long-horizon error accumulation. Scheduled sampling feeds the ground truth with probability `epsilon_i` and the model prediction with probability `1 - epsilon_i`.
+
+The inverse-sigmoid schedule is:
+
+```math
+\epsilon_i
+=
+\frac{\tau}{\tau + \exp(i / \tau)}
+```
+
+`i` is the training iteration. `tau` controls the decay speed. Early training uses more teacher forcing because `epsilon_i` is larger. Later training increasingly exposes the decoder to its own predictions as `epsilon_i` decreases.
+
+Scheduled sampling mitigates exposure bias, but it does not provide uncertainty. It does not guarantee robustness under incidents, missing sensors, graph shift, weather shift, or deployment distribution shift. The model still produces point forecasts. Long-horizon error accumulation is reduced but not formally controlled.
+
+### W. Section 2.3 Compact Summary
+
+| Component | Problem Solved | Mechanistic Meaning | Failure Mode |
+| --- | --- | --- | --- |
+| DCGRU | Combines graph diffusion with recurrent temporal memory | Every GRU gate becomes graph-aware | Wrong graph makes every gate depend on wrong context |
+| Reset gate | Removes stale memory before candidate construction | Forgetting can depend on directed neighborhood evidence | Missingness or shift can cause useful memory to be reset |
+| Update gate | Controls temporal persistence versus adaptation | Retention is conditioned on local and diffused context | Abrupt unseen events may still be retained incorrectly |
+| Candidate state | Builds new memory from current input and filtered history | New hidden state can use spatially propagated context | Noise can be propagated into the candidate memory |
+| Hidden update | Interpolates old memory and new candidate | Supports slow and abrupt temporal dynamics | No calibrated uncertainty over the interpolation |
+| Encoder-decoder | Generates future graph signals sequentially | Multi-step forecasting becomes sequence generation | Recursive predictions can accumulate errors |
+| Scheduled sampling | Reduces train-test decoder mismatch | Gradually replaces teacher forcing with self-generated inputs | Exposure bias is mitigated, not solved |
+
 ## 8. Assumptions
 
-This section records assumptions made visible by Section 2.2 Spatial Dependency Modeling. Later temporal assumptions from Section 2.3 remain pending.
+This section records assumptions made visible by Section 2.2 Spatial Dependency Modeling and Section 2.3 Temporal Dynamics Modeling.
 
 ### Data Assumptions
 
@@ -405,6 +606,16 @@ This section records assumptions made visible by Section 2.2 Spatial Dependency 
 - **K-step diffusion captures the relevant spatial scale.** `K` assumes useful dependency lies inside a finite directed receptive field. The assumption fails if transport is longer-range, regime-dependent, delayed beyond the chosen horizon, or dominated by exogenous shocks.
 - **Static graph is sufficient within the modeled regime.** DCRNN uses a fixed `W`. This can fail under accidents, road closures, sensor outages, demand shifts, weather shifts, or deployment environments where propagation structure changes.
 - **Graph quality bounds model quality.** A wrong `W` does not merely add noise; it changes every diffusion basis function, every learned step-direction weight, and every spatial representation built on top of them.
+
+### Temporal and Recurrent Assumptions
+
+- **Ordinary temporal recurrence is insufficient without graph-aware gates.** Section 2.3 assumes that temporal memory should be conditioned on directed diffusion context, not only dense transformations over flattened sensor vectors.
+- **Hidden states are node-aligned graph signals.** `H(t-1)` is assumed to preserve the same node ordering as `X(t)` and `W`. If node identities drift, recurrent memory is attached to the wrong sensors.
+- **Feature concatenation is not spatial mixing.** `[X(t), H(t-1)]` concatenates channels at each node. Spatial mixing is assumed to happen through diffusion convolution, so graph transition matrices must be valid inside every gate.
+- **Gate values are meaningful deterministic summaries.** Reset and update gates are assumed to summarize when to forget or retain memory. Under missingness, noise, incidents, weather shift, or rare events, these gates may be confidently wrong.
+- **A finite recurrent hidden state captures the relevant history.** DCGRU assumes useful temporal information can be compressed into `H(t)`. Long delayed effects, exogenous forcing, or unobserved regime variables can violate this assumption.
+- **Encoder-decoder recurrence is adequate for multi-step forecasting.** The decoder assumes future horizons can be generated recursively. This can fail when early prediction errors cascade into later horizons.
+- **Scheduled sampling reduces exposure bias enough for training.** The inverse-sigmoid schedule assumes gradual self-feeding improves robustness to test-time decoding. It does not guarantee calibrated or bounded long-horizon error.
 
 ### PM2.5 and Air-Quality Transfer Assumptions
 
@@ -449,6 +660,11 @@ Important interpretation: the experiments support the importance of spatial diff
 - No comparison with later adaptive graph models such as Graph WaveNet, AGCRN, or MTGNN.
 - Strong point metrics may hide horizon-specific, node-specific, or event-specific failure modes.
 - Bidirectional diffusion can improve prediction while weakening physical interpretability.
+- DCGRU is still a deterministic point-forecasting recurrent model, not an uncertainty-aware forecasting system.
+- Replacing GRU dense maps with diffusion convolution makes gates graph-aware, but it also makes every temporal decision dependent on graph validity.
+- Scheduled sampling mitigates exposure bias but does not provide uncertainty, calibration, missingness robustness, or formal control of long-horizon error accumulation.
+- Encoder-decoder decoding can still compound mistakes because future predictions depend on earlier generated predictions.
+- Static `W` and deterministic hidden states are insufficient for reliable environmental forecasting under dynamic meteorology, emissions, deposition, chemistry, and deployment distribution shift.
 
 ## 11. Research-Level Critique
 
@@ -463,6 +679,12 @@ The gap between predictive performance and reliability is central. Section 2.2 i
 What the paper makes easier to study is the role of directed spatial propagation as an explicit model component. Because `K`, forward/backward directions, and transition matrices are explicit, they can be ablated, perturbed, reversed, sparsified, or compared against alternative graphs. What remains unresolved is whether the learned diffusion weights correspond to stable mechanisms or dataset-specific correlations, and how the model behaves when the graph, sensors, or deployment regime shifts.
 
 If I were extending this paper, the next experiment would be graph perturbation stress testing: compare original, distance-only, wind-informed, direction-reversed, edge-dropped, weight-noised, random, and dynamic graphs across horizon-wise error, calibration, coverage, representation stability, and Top-K high-risk decision reliability. This would test whether diffusion convolution is reliable or merely accurate under one fixed graph construction.
+
+Section 2.3 strengthens the model by making temporal dynamics graph-aware. The important research move is not simply that DCRNN has an RNN; it is that the recurrent state transition itself is conditioned on `G`. The reset gate decides what memory to erase after seeing directed diffusion context. The update gate decides whether to retain old dynamics or adapt to new local and neighboring conditions. The candidate state constructs new memory from current graph signal and reset-filtered prior memory. This is a coherent answer to why ordinary GRU is insufficient for traffic networks.
+
+The critique is that this also concentrates risk. If `W` is invalid, then every gate is invalid in a structured way. A dense GRU might learn arbitrary correlations; DCGRU deliberately restricts gate computation through the graph diffusion basis. That restriction is useful when the graph is right, but it can be brittle under incidents, missing nodes, graph shift, weather shift, or sensor corruption. Scheduled sampling addresses decoder exposure bias, but it does not solve graph validity, calibration, uncertainty, or deployment robustness.
+
+For PM2.5 and air quality, DCGRU gives a useful backbone: each monitoring station's hidden state can aggregate upwind or downwind context if `W` is meteorologically meaningful. But pollutant dynamics are not only graph diffusion plus recurrence. They include dynamic winds, emissions, deposition, chemical transformation, vertical mixing, boundary-layer changes, and exogenous forcing. A reliable extension should therefore combine DCGRU-style memory with dynamic graphs, meteorological covariates, uncertainty quantification, conformal calibration, shift evaluation, and decision-level metrics.
 
 ## 12. Connection to My Active Project
 
@@ -499,6 +721,12 @@ In the flagship project, DCRNN helps with:
 
 The correct project framing is: use DCRNN-style diffusion convolution as a baseline spatial backbone, then ask whether its directed transition operator is valid, stable, calibrated, and decision-reliable. The project should not claim that DCRNN solves reliability; it should use DCRNN to expose where reliability must be added.
 
+Section 2.3 adds the temporal-memory part of that backbone. A PM2.5 version can model each monitoring station's hidden state as graph-aware temporal memory. If `W` is wind-informed, the hidden state at one station can aggregate upwind/downwind information before deciding whether to reset stale memory, retain the prior regime, or construct a new candidate state.
+
+However, this transfer should be treated as a hypothesis, not a guarantee. PM2.5 dynamics are affected by dynamic meteorology, emissions, deposition, chemical transformation, source events, missing observations, and exogenous forcing. Static `W` and deterministic hidden states are insufficient for reliable environmental forecasting. The project extension should include dynamic graphs, meteorological covariates, uncertainty quantification, conformal calibration, shift evaluation, graph perturbation tests, and decision-level metrics such as high-risk station ranking stability.
+
+A direct project question from Section 2.3 is whether graph-aware gating improves high-risk event detection or only reduces average point error. The evaluation should separate point metrics from reliability metrics: MAE/RMSE for accuracy, coverage and interval width for uncertainty, Top-K overlap and missed-event rate for decisions, and stress tests for missingness, corrupted sensors, graph shift, and weather shift.
+
 ## 13. Transferable Intuitions
 
 | Principle | Deep Meaning | Project Implication |
@@ -510,6 +738,10 @@ The correct project framing is: use DCRNN-style diffusion convolution as a basel
 | Learnable diffusion weights are not proof of mechanism. | `theta` can learn predictive correlations over graph paths without establishing causality. | Analyze learned weights with perturbation, lag consistency, and regime-specific diagnostics. |
 | Bidirectionality is useful but ambiguous. | Forward and backward diffusion improve expressive power while blurring physical interpretation. | For PM2.5, reverse diffusion should be treated as predictive unless validated by wind or source evidence. |
 | Efficient graph computation enables stress tests. | Sparse recursive diffusion makes it practical to test many graph variants. | Use graph perturbation, edge deletion, direction reversal, and dynamic graph comparisons as standard reliability checks. |
+| DCGRU makes gates graph-aware. | Temporal memory is not updated by dense maps alone; reset, update, and candidate gates all depend on directed diffusion context. | For PM2.5, test whether wind-informed gating improves event detection, not only average error. |
+| Concatenation preserves node identity. | `[X(t), H(t-1)]` joins channels at each node; graph diffusion performs spatial mixing later. | Keep station ordering and hidden-state masks auditable across all recurrent steps. |
+| Encoder-decoder forecasting is sequence generation. | Future horizons are generated recursively, so early errors can influence later predictions. | Evaluate horizon-wise error accumulation and reliability, especially during high-pollution episodes. |
+| Scheduled sampling mitigates exposure bias. | The decoder gradually learns to consume its own predictions, but the method does not quantify uncertainty. | Combine scheduled sampling with uncertainty-aware decoding, conformal calibration, or stress testing. |
 | Point accuracy is not reliability. | Better MAE does not imply calibrated uncertainty, robust coverage, or stable decisions. | Evaluate coverage, interval width, Top-K high-risk stability, decision regret, and representation stability. |
 
 The main transferable intuition is that the spatial operator should be treated as a scientific hypothesis. The equation is not just a neural network layer; it encodes what kinds of spatial influence the project is willing to believe before seeing the training loss.
@@ -527,6 +759,11 @@ The main transferable intuition is that the spatial operator should be treated a
 | Missingness handling | Prevent missing values from being diffused as valid signals | Use masks, imputation checks, and missing-sensor stress tests |
 | PM2.5 graph variants | Compare distance-only, wind-informed, terrain-informed, source-aware, lag-aware, learned, dynamic, and hybrid graphs | Evaluate graph validity under meteorological regime shift |
 | Reliability evaluation | Add UQ, conformal coverage, interval width, and risk ranking around the DCRNN backbone | Report calibration, conditional coverage, Top-K overlap, and decision regret |
+| DCGRU gate replacement | Replace dense affine maps in GRU with diffusion convolution for reset, update, and candidate computations | Verify that every gate preserves node dimension `N` and uses the intended graph operators |
+| Feature concatenation | Concatenate `X(t)` and `H(t-1)` along feature/channel dimension | Assert tensor shape `N x (P+Q)` and stable node ordering before diffusion |
+| Hidden state storage | Store `H(t)` as a graph signal over all nodes | Mask missing nodes and prevent corrupted memory from being diffused |
+| Encoder-decoder loop | Feed historical graph signals to encoder and generate future graph signals step by step | Report horizon-wise error and long-horizon reliability separately |
+| Scheduled sampling | Log `epsilon_i`, `tau`, training iteration, and whether decoder input used truth or prediction | Compare teacher forcing, scheduled sampling, and self-feeding under shift |
 | Monitoring | Track whether graph assumptions remain valid during deployment | Monitor wind-regime shift, graph-shift indicators, residual clusters, and representation drift |
 
 Concrete implications for future implementation planning:
@@ -538,6 +775,12 @@ Concrete implications for future implementation planning:
 - Log `K`, direction mode, graph threshold, normalization, and zero-degree handling.
 - Add graph perturbation tests: edge deletion, edge rewiring, weight noise, direction reversal, random graph controls, and dynamic graph variants.
 - For PM2.5, treat graph construction as a research component: wind-informed, terrain-informed, meteorology-informed, source-aware, lag-aware, causal, learned, dynamic, or hybrid.
+- Implement DCGRU by replacing dense affine maps in GRU with diffusion convolution for reset gate, update gate, and candidate state.
+- Preserve node dimension `N` throughout recurrent computation.
+- Concatenate input and hidden state along feature/channel dimension, not node dimension.
+- Store or compute forward and backward transition matrices once per graph variant, then reuse them inside every recurrent gate.
+- Log `K`, graph type, scheduled sampling schedule, `tau`, teacher-forcing probability, and forecasting horizon.
+- Separate point metrics from reliability metrics: MAE/RMSE/MAPE for accuracy; coverage, interval width, conformal score behavior, Top-K overlap, missed-event rate, and decision regret for reliability.
 - Do not evaluate the backbone with point metrics alone; include missingness/noise/shift robustness, conformal coverage, uncertainty quality, Top-K high-risk decision reliability, and representation stability.
 
 ## 15. Possible Research Questions
@@ -556,9 +799,16 @@ These are research-level questions after the Section 2.2 Spatial Dependency Mode
 | Can dynamic graphs improve robustness over a fixed row-stochastic transition matrix? | Static `W` may fail under changing wind, demand, incidents, or meteorological regimes. | Train or evaluate fixed, regime-conditioned, wind-conditioned, learned adaptive, and hybrid dynamic graphs. | Dynamic distribution shift |
 | How should graph validity be measured independently from downstream accuracy? | A graph can improve MAE while encoding spurious or nonphysical propagation. | Use lag correlation, physical consistency, perturbation stability, source-receptor analysis, and edge-level diagnostics. | Graph validation methodology |
 
+| Does DCGRU outperform simpler spatial-then-temporal decompositions under graph shift? | It tests whether graph-aware gating adds robustness or only in-distribution accuracy. | Compare DCGRU against diffusion-then-GRU, GRU-then-diffusion, and independent horizon models under graph perturbation. | Architecture ablation |
+| How much of DCRNN's long-horizon gain comes from DCGRU versus scheduled sampling? | The paper combines recurrent graph gating with an exposure-bias mitigation strategy. | Ablate dense GRU, DCGRU, teacher forcing, scheduled sampling, and self-feeding across horizons. | Temporal ablation |
+| Can scheduled sampling be combined with uncertainty-aware decoding? | Scheduled sampling changes decoder inputs but leaves forecasts deterministic. | Add probabilistic decoding, ensembles, quantile heads, or conformal wrappers and evaluate coverage under self-feeding. | Uncertainty-aware decoding |
+| Does graph-aware gating improve high-risk event detection, or only MAE? | Reliability-oriented PM2.5 forecasting cares about missed high-risk events and rankings. | Report Top-K overlap, missed-event rate, recall at high-pollution thresholds, and decision regret. | Decision reliability |
+| How does DCGRU behave under missing nodes or corrupted sensors? | Hidden states and gate values may diffuse missing or noisy signals over the graph. | Mask nodes, corrupt sensors, drop stations, and measure horizon-wise error, calibration, and representation drift. | Missingness and noise robustness |
+| Can dynamic meteorological graphs improve DCGRU for PM2.5 forecasting? | Static graphs may fail when wind direction, speed, boundary layer, or source regimes change. | Compare fixed distance graph, wind-conditioned graph, learned dynamic graph, and hybrid graph under weather-regime shift. | Dynamic graph modeling |
+
 ## 16. What I Should Be Able to Explain After Reading
 
-After the Section 2.2 reading pass, I should be able to explain:
+After the Section 2.2 and Section 2.3 reading passes, I should be able to explain:
 
 - Why Section 2.2 turns `G=(V,E,W)` from a structural prior into a spatial propagation operator.
 - Why ChebNet's undirected Laplacian filtering is not the same inductive bias as DCRNN's directed random-walk diffusion.
@@ -580,24 +830,38 @@ After the Section 2.2 reading pass, I should be able to explain:
 - Why static row-stochastic diffusion may fail for air quality under wind shift, source changes, deposition, chemistry, missingness, noise, or deployment shift.
 - Why DCRNN is a forecasting backbone, not a complete reliability framework.
 - How this section suggests graph validation, graph perturbation, UQ, conformal calibration, Top-K decision reliability, and representation stability experiments.
+- Why ordinary GRU is insufficient for directed traffic sensor networks.
+- How Section 2.3 turns diffusion convolution into DCGRU by replacing dense GRU maps with graph diffusion convolution.
+- What `X(t)`, `H(t-1)`, `[X(t), H(t-1)]`, `r(t)`, `u(t)`, `C(t)`, and `H(t)` mean mechanistically.
+- Why `[X(t), H(t-1)]` is feature/channel concatenation at each node rather than node mixing.
+- How the reset gate, update gate, candidate state, and hidden-state update work in DCGRU.
+- Why DCGRU can be interpreted as a graph-conditioned state transition function.
+- How the encoder-decoder architecture treats multi-step forecasting as sequence generation.
+- Why scheduled sampling is introduced, what `epsilon_i` and `tau` mean, and why exposure bias is mitigated rather than formally solved.
+- Why DCGRU plus scheduled sampling still does not provide uncertainty, calibration, graph-shift robustness, missingness robustness, or decision-level reliability.
+- How DCGRU could transfer to PM2.5 forecasting through wind-informed graph-aware station memory, and why static `W` remains insufficient.
 
-Not yet expected after this pass: a full explanation of Section 2.3 Temporal Dynamics Modeling or DCGRU internals. That is the next reading action.
+Not yet expected after this pass: detailed Section 3 Related Work synthesis or Section 4 Experiments analysis. Those are the next reading actions.
 
 ## 17. Follow-Up Actions
 
 | Action | Target File or Project Component | Status |
 | --- | --- | --- |
 | Finish Section 2.2 Spatial Dependency Modeling first-pass note | P-ST-002 method notes | Done |
+| Finish Section 2.3 Temporal Dynamics Modeling first-pass note | P-ST-002 method notes | Done |
 | Verify diffusion convolution notation against the original paper during deeper reading | Section 7 derivation notes | Planned |
+| Verify DCGRU gate notation and tensor orientation against the original paper during deeper reading | Section 7 derivation notes | Planned |
 | Check the convention for `W_{ij}` and transition multiplication orientation | Section 7 derivation notes | Planned |
 | Compare DCRNN diffusion convolution with ChebNet directed-vs-undirected assumptions | P-ST-002 / ChebNet comparison | Planned |
+| Compare DCGRU against dense GRU and spatial-then-temporal decompositions | Future ablation notes | Planned |
+| Analyze scheduled sampling as exposure-bias mitigation, not uncertainty quantification | Future temporal modeling notes | Planned |
 | Design graph perturbation stress tests for DCRNN-style backbone | Future reliability experiment plan | Planned |
 | Draft PM2.5 graph construction variants: distance-only, wind-informed, terrain-informed, source-aware, lag-aware, learned, dynamic, and hybrid | Project graph validation notes | Planned |
 | Add missingness, noise, graph shift, and meteorological regime shift evaluation ideas to future experiment planning | Future reliability experiment plan | Planned |
 | Define Top-K high-risk decision reliability metrics for DCRNN-style forecasts | Risk-aware decision evaluation | Planned |
-| Next reading: Section 2.3 Temporal Dynamics Modeling and DCGRU | P-ST-002 method notes | Next |
+| Next reading: Section 3 Related Work and Section 4 Experiments | P-ST-002 method and evidence notes | Next |
 
-Do not mark the paper as Completed after this pass. Keep Reading Status as `Reading` until the temporal model, experiments, assumptions, limitations, and project-transfer checks have been completed at deeper reading level.
+Do not start detailed experiment analysis yet except as the next action. Do not mark the paper as Completed after this pass. Keep Reading Status as `Reading` until the experiments, assumptions, limitations, and project-transfer checks have been completed at deeper reading level.
 
 ## 18. Completion Criteria
 
