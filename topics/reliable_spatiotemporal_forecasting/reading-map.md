@@ -8,7 +8,7 @@
 4. Reliability under distribution shift
 5. Decision-aware forecasting
 6. Probabilistic environmental forecasting extension
-7. Representation, causal, and systems extensions only after the core path is stable
+7. Representation, causal, learning-dynamics, and systems extensions only after the core path is stable
 
 ## Active Public Roadmap
 
@@ -50,6 +50,7 @@ A dedicated spatiotemporal graph forecasting queue is maintained in
 | Causal data audit papers | Later data quality and causal audit extension |
 | LLM / RAG / agent reliability papers | Kept as a separate Litflow-related line, not part of the current spatiotemporal forecasting core |
 | AI systems / inference systems papers | Kept as a systems side line, not part of the current spatiotemporal forecasting core |
+| Learning dynamics and optimization papers | Gated theory bridge for explaining representation/adaptation behavior through training dynamics, not part of the current forecasting MVP |
 
 ## Paper Queue
 
@@ -104,3 +105,27 @@ Phase C papers must not expand MVP scope prematurely.
 P-AQ-001 is a frontier watchlist preprint, not a mandatory MVP benchmark.
 
 Contextual relevance does not override foundational learning priority.
+
+### Phase D: Gated Learning-Dynamics Bridge
+
+This phase supports the Sadhika Malladi advisor-preparation route only after the core forecasting and reliability path exposes a concrete representation-stability or adaptation question. It is a learning-dynamics bridge, not evidence that Sadhika works on spatiotemporal forecasting.
+
+| Stage | Paper IDs | Research Question |
+| ----- | --------- | ----------------- |
+| 1 - Optimization Dynamics | P-LD-001 -> P-LD-002 | Can optimization trajectories be modeled as analyzable stochastic dynamics? |
+| 2 - Fine-Tuning Dynamics | P-LD-003 -> P-LD-004 | What do pretrained representations preserve, and what does fine-tuning actually change? |
+| 3 - Data to Learning Dynamics | P-LD-005 | Which observations drive parameter updates, representation changes, and downstream behavior? |
+| 4 - Objective to Unexpected Behavior | P-LD-006 -> P-LD-008 | Does the objective control the behavior we think it controls? |
+| 5 - Training Trajectory / Representation Plasticity | P-LD-007 -> P-LD-009 | When do training procedures make representations stable, adaptable, or brittle? |
+| 6 - Pretraining to Post-training Theory | P-LD-010 | How does pretraining coverage enable later adaptation and generalization? |
+
+Potential bridge / research hypothesis:
+
+Environment dynamics
+-> observed data distribution
+-> learning / adaptation dynamics
+-> parameter trajectory
+-> representation trajectory
+-> prediction / decision behavior
+
+This is an analytical bridge from Sadhika Malladi's learning-dynamics methodology to the user's representation/mechanism direction. It does not mean she currently studies spatiotemporal representation drift.

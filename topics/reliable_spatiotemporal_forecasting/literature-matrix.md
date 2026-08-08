@@ -22,3 +22,16 @@ not what has already been reproduced.
 | Priority 2 | Evaluating Neuron Explanations: A Unified Framework with Sanity Checks | metadata-to-verify | Trustworthy evaluation and meta-evaluation | Sanity-check logic for reliability metrics themselves |
 | Priority 2 | Prediction without Preclusion: Recourse Verification with Reachable Sets | metadata-to-verify | Risk-aware decision-making and actionability | Connection from uncertainty outputs to feasible actions and downstream consequences |
 | Priority 2 | U-Cast: A Simple Approach to Calibrated Weather Forecasting | metadata-to-verify | Probabilistic environmental forecasting | CRPS, MC Dropout, and probabilistic forecasting evaluation design |
+
+## Gated Learning-Dynamics Bridge Extraction Matrix
+
+These entries are verified in the master paper index and support the Sadhika Malladi preparation route. They should be activated only when the project needs a theory route for representation formation, adaptation, or objective-driven behavior change.
+
+| Stage | Paper IDs | Verification Status | Bridge Role | Planned Extraction |
+| ----- | --------- | ------------------- | ----------- | ------------------ |
+| Stage 1 | P-LD-001, P-LD-002 | Verified | Optimization dynamics foundation | What SDE approximations preserve or lose; how optimizer scaling rules become testable predictions |
+| Stage 2 | P-LD-003, P-LD-004 | Verified | Fine-tuning dynamics | What pretrained representations preserve, what fine-tuning changes, and why pretrained models alter optimization geometry |
+| Stage 3 | P-LD-005 | Verified | Data influence to learning dynamics | Which samples drive parameter updates and downstream behavior changes |
+| Stage 4 | P-LD-006, P-LD-008 | Verified | Objective-behavior mismatch | How preference objectives can fail to optimize the intended ranking or behavior |
+| Stage 5 | P-LD-007, P-LD-009 | Verified | Training trajectory and representation plasticity | Whether the training procedure or pretraining duration shapes learning order and adaptability |
+| Stage 6 | P-LD-010 | Verified | Pretraining to post-training theory | How coverage/support in pretraining enables post-training success |

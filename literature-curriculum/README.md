@@ -10,8 +10,8 @@ Optional contextual relevance may be recorded when it helps explain
 the connection between a paper and an active research direction.
 
 The curriculum should support long-term development in reliable AI,
-representation analysis, ML systems for evaluation and monitoring,
-and LLM evaluation and alignment.
+representation analysis, learning dynamics and optimization,
+ML systems for evaluation and monitoring, and LLM evaluation and alignment.
 
 ## Paper Selection Standards
 

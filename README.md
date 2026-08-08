@@ -43,6 +43,7 @@ Calibration, Uncertainty Quantification, and Risk-Aware Decision-Making.
 * Uncertainty and calibration: MC Dropout, Deep Ensembles, calibration, conformal prediction.
 * Distribution-shift evaluation: robustness, stress testing, monitoring, failure analysis.
 * Interpretable representation: concept representation, CKA, probing, representation stability.
+* Learning dynamics and optimization: SGD/SDE approximations, fine-tuning dynamics, data influence, and post-training objective-behavior mismatch as a gated theory bridge.
 * Decision reliability: selective prediction, risk-aware allocation, actionability.
 
 ## Current Public Roadmap

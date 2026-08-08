@@ -53,6 +53,19 @@ foundational tier system above.
 | LLM / RAG / agent reliability | Separate Litflow-related line |
 | AI systems / inference systems | Separate systems side line |
 
+### Learning-Dynamics Bridge Queue - Evidence-Gated
+
+This queue supports the Sadhika Malladi advisor-preparation route. It is a theory bridge for understanding how optimization dynamics produce model states, representations, and behavior. It does not replace the current reliable spatiotemporal forecasting priority.
+
+| Stage | Paper IDs | Why Read |
+| ----- | --------- | -------- |
+| 1 - Optimization Dynamics | P-LD-001 -> P-LD-002 | Learn how SGD and adaptive optimizers become analyzable stochastic dynamics and how scaling rules emerge from theory. |
+| 2 - Fine-Tuning Dynamics | P-LD-003 -> P-LD-004 | Understand what pretrained representations preserve, what fine-tuning changes, and why pretrained models alter the optimization landscape. |
+| 3 - Data to Learning Dynamics | P-LD-005 | Ask which observations drive parameter updates, representation changes, and downstream behavior. |
+| 4 - Objective to Unexpected Behavior | P-LD-006 -> P-LD-008 | Study how preference objectives can fail to control the behavior they appear to target. |
+| 5 - Training Trajectory / Representation Plasticity | P-LD-007 -> P-LD-009 | Track how training procedures and pretraining duration affect learning order and adaptability. |
+| 6 - Pretraining to Post-training Theory | P-LD-010 | Connect coverage, representation support, adaptation, and generalization in the latest post-training theory queue. |
+
 ## Notes
 
 One paper may have multiple tiers.
