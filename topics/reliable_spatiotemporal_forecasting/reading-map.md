@@ -10,6 +10,46 @@
 6. Probabilistic environmental forecasting extension
 7. Representation, causal, learning-dynamics, and systems extensions only after the core path is stable
 
+## Private Advisor-Preparation Sync - 2026-08-10
+
+The public reading order remains foundations-first. The private advisor-entry strategy no longer requires finishing the full eight-week reproduction plan before contacting faculty.
+
+Minimum advisor-contact reading threshold:
+
+```text
+2 deep-read papers
++
+3-6 broader papers
++
+Research Interest Memo
+```
+
+This threshold supports serious conversation, not a mature proposal.
+
+Advisor-specific use:
+
+| Advisor | Reading Role | Contact Implication |
+| -- | -- | -- |
+| Rose Yu | DCRNN / STGCN + spatiotemporal UQ / conformal / dynamic-shift paper | Enough to discuss reliable ST forecasting or dynamic-system reliability; do not wait for a new ST project. |
+| Lily Weng | robust conformal + trustworthy evaluation / NeuronEval style paper | Enough to discuss reliability/evaluation as a bounded task; do not write generic AI safety. |
+| Biwei Huang | causal discovery / invariance / nonstationarity + Biwei-related causal representation paper | Enough to ask whether shift questions should become causal mechanism questions; do not overclaim causality. |
+| Sadhika Malladi | kernel fine-tuning + SDE/optimizer/LESS/DPO/overtraining/coverage paper | Enough to ask a learning-dynamics preparation question; do not frame as ST forecasting or generic LLM interest. |
+| Tianhao Wang | feature emergence / grokking + optimization / SAE / transformer dynamics paper | Secondary theory route; do not start from PM2.5 or traffic forecasting. |
+| Gal Mishne | graph signal processing / spectral foundation + diffusion geometry / graph learning paper | Secondary geometry route; contact only with graph-validity or representation-geometry memo. |
+| Haojian Jin | agent oversight / human-centered systems + privacy/policy/audit paper | Secondary oversight route; contact only if external control remains real interest. |
+
+The reading goal is to move from summary to research thinking:
+
+```text
+Claim
+-> Assumption
+-> Mathematical mechanism
+-> Evidence
+-> Alternative explanation
+-> Failure condition
+-> Open question
+```
+
 ## Active Public Roadmap
 
 The eight-week public literature and reproduction plan is maintained in
