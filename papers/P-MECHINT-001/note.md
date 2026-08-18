@@ -59,27 +59,27 @@ Grokking 或 delayed generalization 描述的是一种特殊训练现象：
 
 论文的核心理论以两层非线性网络为主要分析对象。设训练输入矩阵为：
 
-$$
+```math
 X \in \mathbb{R}^{N \times d},
-$$
+```
 
 其中 $N$ 是样本数，$d$ 是输入特征维度。隐藏层权重为：
 
-$$
+```math
 W \in \mathbb{R}^{d \times m},
-$$
+```
 
 其中 $m$ 是隐藏层宽度，即隐藏神经元数量。隐藏层激活为：
 
-$$
+```math
 F = \sigma(XW),
-$$
+```
 
 输出预测为：
 
-$$
+```math
 \hat Y = FA.
-$$
+```
 
 这里：
 
@@ -90,19 +90,19 @@ $$
 
 第 $j$ 个隐藏神经元的权重向量记作：
 
-$$
+```math
 w_j \in \mathbb{R}^d.
-$$
+```
 
 它在第 $i$ 个样本上的激活是：
 
-$$
+```math
 h_{ij} = \sigma(x_i^\top w_j).
-$$
+```
 
 它在所有训练样本上的激活向量是：
 
-$$
+```math
 h_j =
 \begin{bmatrix}
 \sigma(x_1^\top w_j)\\
@@ -110,13 +110,13 @@ h_j =
 \vdots\\
 \sigma(x_N^\top w_j)
 \end{bmatrix}.
-$$
+```
 
 于是隐藏层激活矩阵可以写成列向量拼接：
 
-$$
+```math
 F = [h_1,h_2,\dots,h_m] \in \mathbb{R}^{N \times m}.
-$$
+```
 
 需要强调的是，权重 $w_j$ 是同一个；输入 $x_i$ 不同，所以内积 $x_i^\top w_j$ 不同；经过非线性函数 $\sigma$ 以后，同一个神经元会对不同样本产生不同强度的响应。因此一个隐藏神经元本质上是一个“特征探测器”，而它在整个训练集上的激活向量 $h_j$ 就是一个“特征模式”。
 
@@ -130,21 +130,21 @@ $$
 
 隐藏层宽度 $m$ 控制模型拥有多少个隐藏特征坐标。隐藏层激活矩阵为：
 
-$$
+```math
 F = [h_1,h_2,\dots,h_m] \in \mathbb{R}^{N \times m}.
-$$
+```
 
 如果 $m$ 很大，尤其是 $m \ge N$，并且随机初始化得到的随机特征矩阵 $F$ 秩足够高，那么输出层可以找到某个 $A$，使得：
 
-$$
+```math
 FA \approx Y,
-$$
+```
 
 甚至在理想插值情形下：
 
-$$
+```math
 FA = Y.
-$$
+```
 
 这就是“随机特征空间里的插值”。它的关键含义是：训练集上表现好并不自动说明隐藏层已经学到了任务结构。输出层可能只是利用大量随机特征作为基函数，在有限训练点上构造了一个能够穿过标签的线性组合。
 
@@ -175,9 +175,9 @@ Stage I / II / III 不是数据逐步增大的三个阶段。
 
 Stage 不是简单按 epoch 人为切分，而是按反向传播到隐藏层的梯度结构变化划分。核心对象是：
 
-$$
+```math
 G_F = \frac{\partial L}{\partial F}.
-$$
+```
 
 可以用以下指标诊断训练处在哪个 regime：
 
@@ -197,33 +197,33 @@ $$
 
 Stage I 中，隐藏层基本不动：
 
-$$
+```math
 W \approx W_0.
-$$
+```
 
 因此隐藏层仍然近似是随机特征：
 
-$$
+```math
 F \approx \sigma(XW_0).
-$$
+```
 
 输出层快速学习：
 
-$$
+```math
 \hat Y = FA.
-$$
+```
 
 训练目标可以近似为固定随机特征上的 ridge regression：
 
-$$
+```math
 \min_A \; \lVert Y - FA\rVert_F^2 + \lambda \lVert A\rVert_F^2.
-$$
+```
 
 Stage I 的核心动力学特征是：
 
-$$
+```math
 \lVert \Delta A\rVert \gg \lVert \Delta W\rVert.
-$$
+```
 
 对应训练曲线表现为：
 
@@ -244,32 +244,27 @@ $$
 
 设平方损失为：
 
-$$
-L = \frac{1}{2}\lVert FA - Y\rVert_F^2
-+ \frac{\lambda}{2}\lVert A\rVert_F^2
-+ \frac{\lambda}{2}\lVert W\rVert_F^2,
-$$
+```math
+L = \frac{1}{2}\lVert FA - Y\rVert_F^2 + \frac{\lambda}{2}\lVert A\rVert_F^2 + \frac{\lambda}{2}\lVert W\rVert_F^2,
+```
 
 其中：
 
-$$
+```math
 F = \sigma(XW).
-$$
+```
 
 输出层梯度为：
 
-$$
+```math
 \nabla_A L = F^\top(FA-Y) + \lambda A.
-$$
+```
 
 记 $a_j$ 为输出层中与第 $j$ 个隐藏神经元对应的输出权重，即 $A$ 的第 $j$ 行或相应输出通道权重。第 $j$ 个隐藏神经元的梯度为：
 
-$$
-\nabla_{w_j}L
-=
-X^\top\left[((FA-Y)a_j)\odot \sigma'(Xw_j)\right]
-+\lambda w_j.
-$$
+```math
+\nabla_{w_j}L = X^\top\left[((FA-Y)a_j)\odot \sigma'(Xw_j)\right] +\lambda w_j.
+```
 
 早期初始化时：
 
@@ -281,30 +276,29 @@ $$
 
 对 $A$ 来说，若初始化下 $FA$ 还很小，可以近似得到：
 
-$$
+```math
 \nabla_A L \approx -F^\top Y.
-$$
+```
 
 只要随机特征矩阵 $F$ 足够宽、秩足够高，$F^\top Y$ 就能给出直接降低训练误差的方向。输出层看到的是已经展开好的随机特征坐标，它只需要在线性空间中组合这些坐标。
 
 对 $W$ 来说：
 
-$$
-\nabla_{w_j} L \approx
-X^\top\left[(-Y a_j)\odot \sigma'(Xw_j)\right].
-$$
+```math
+\nabla_{w_j} L \approx X^\top\left[(-Y a_j)\odot \sigma'(Xw_j)\right].
+```
 
 这个梯度额外乘了随机输出权重 $a_j$ 和随机 gating $\sigma'(Xw_j)$。因此即使标签 $Y$ 本身有结构，传到单个隐藏神经元时也可能被随机权重和随机 gating 打散，导致方向性差、信噪比低。
 
 所以早期有效动力学是：
 
-$$
+```math
 A \text{ learns fast},
-$$
+```
 
-$$
+```math
 W \text{ receives noisy / incoherent gradients}.
-$$
+```
 
 这不是训练算法真的先训练 $A$ 后训练 $W$。真实优化仍是端到端更新，只是两个参数块的有效更新速度不同。也不能说 $W$ 的速度单调变慢。典型情形是：
 
@@ -322,37 +316,31 @@ $$
 
 Stage I 后，输出层 $A$ 不再随机，它已经通过随机特征拟合过训练标签。因此反向传播到隐藏层的梯度：
 
-$$
+```math
 G_F = \frac{\partial L}{\partial F}
-$$
+```
 
 开始携带标签信息。
 
 Stage II 的核心近似是：
 
-$$
-G_{F,j}
-\text{ mainly depends on }
-h_j,
-$$
+```math
+G_{F,j} \text{ mainly depends on } h_j,
+```
 
 也就是说，第 $j$ 个隐藏神经元的梯度主要依赖自己的激活模式，而不强依赖其他隐藏节点。此时每个隐藏节点可以近似独立地学习特征。
 
 论文将这一阶段解释为：原始 loss 上对 $w_j$ 的梯度下降，近似等价于某个有效能量函数 $E(w_j)$ 上的梯度上升：
 
-$$
+```math
 -\nabla_{w_j} L \approx c \nabla_{w_j} E(w_j),
-$$
+```
 
 其中 $c>0$ 是尺度系数。于是：
 
-$$
-w_j^{t+1}
-=
-w_j^t - \eta \nabla_{w_j} L
-\approx
-w_j^t + \eta c \nabla_{w_j}E(w_j).
-$$
+```math
+w_j^{t+1} = w_j^t - \eta \nabla_{w_j} L \approx w_j^t + \eta c \nabla_{w_j}E(w_j).
+```
 
 这句话的精确含义是：
 
@@ -376,15 +364,15 @@ Stage II 是本文最关键的理论桥梁：它把“隐藏特征怎么涌现�
 
 不同隐藏节点：
 
-$$
+```math
 w_1,w_2,\dots,w_m
-$$
+```
 
 独立随机初始化。因此：
 
-$$
+```math
 h_j=\sigma(Xw_j)
-$$
+```
 
 在统计上近似独立或弱相关。换句话说，随机初始化让不同神经元最开始从不同方向观察数据。若所有 $w_j$ 初始化完全相同，那么无论宽度多大，所有 $h_j$ 都相同，宽度不会产生有效多样性。
 
@@ -392,45 +380,29 @@ $$
 
 考虑经验神经切线或随机特征 Gram 的一个典型对象：
 
-$$
-\frac{1}{m}FF^\top
-=
-\frac{1}{m}\sum_{j=1}^{m}h_jh_j^\top.
-$$
+```math
+\frac{1}{m}FF^\top = \frac{1}{m}\sum_{j=1}^{m}h_jh_j^\top.
+```
 
 这是很多独立随机矩阵的平均。大宽度下，根据集中现象：
 
-$$
-\frac{1}{m}FF^\top
-\approx
-\mathbb{E}[hh^\top].
-$$
+```math
+\frac{1}{m}FF^\top \approx \mathbb{E}[hh^\top].
+```
 
 交叉项相对变小，相关矩阵趋向简单结构，例如 identity 的倍数或近似对角。用一句话概括：
 
-$$
-\text{随机初始化}
-\Rightarrow
-\text{交叉项期望小},
-$$
+> **要点**：随机初始化 => 交叉项期望小
 
-$$
-\text{大宽度}
-\Rightarrow
-\text{交叉项以高概率真的小}.
-$$
+> **要点**：大宽度 => 交叉项以高概率真的小
 
 没有随机初始化，宽度大也可能所有节点相同；没有足够宽度，随机初始化也可能偶然相关较强。Stage II 的独立特征学习近似依赖二者共同成立。
 
 一个可测指标是隐藏特征相关矩阵的 off-diagonal ratio。令 $\tilde F$ 为中心化或标准化后的隐藏激活，则：
 
-$$
-\frac{
-\left\lVert \tilde F^\top \tilde F-\mathrm{diag}(\tilde F^\top \tilde F)\right\rVert_F
-}{
-\left\lVert \tilde F^\top \tilde F\right\rVert_F
-}.
-$$
+```math
+\frac{ \left\lVert \tilde F^\top \tilde F-\mathrm{diag}(\tilde F^\top \tilde F)\right\rVert_F }{ \left\lVert \tilde F^\top \tilde F\right\rVert_F }.
+```
 
 如果该量小，说明隐藏特征之间的相关性较弱，独立特征学习近似更可信；如果该量大，则 Stage II 近似不成立或正在进入 Stage III。
 ### 8.X 大宽度不是让一对神经元更独立，而是让整体随机特征统计量集中
@@ -439,149 +411,115 @@ $$
 
 更准确的逻辑是：
 
-$$
-\boxed{
-\text{independence comes from iid initialization; decoupling comes from width-induced concentration.}
-}
-$$
+> **要点**：independence comes from iid initialization; decoupling comes from width-induced concentration
 
 即：
 
-$$
-\boxed{
-\text{随机初始化产生隐藏节点作为随机变量的独立性。}
-}
-$$
+> **要点**：随机初始化产生隐藏节点作为随机变量的独立性。
 
-$$
-\boxed{
-\text{大宽度让许多独立随机特征的平均统计量集中到稳定平均场。}
-}
-$$
+> **要点**：大宽度让许多独立随机特征的平均统计量集中到稳定平均场。
 
 设固定训练集：
 
-$$
+```math
 X\in \mathbb{R}^{n\times d},
-$$
+```
 
 隐藏层宽度为：
 
-$$
+```math
 m,
-$$
+```
 
 隐藏权重为：
 
-$$
+```math
 W=[w_1,w_2,\dots,w_m]\in \mathbb{R}^{d\times m}.
-$$
+```
 
 第 $j$ 个隐藏节点在所有样本上的激活向量为：
 
-$$
+```math
 h_j=\sigma(Xw_j)\in \mathbb{R}^n,
-$$
+```
 
 隐藏层表示矩阵为：
 
-$$
+```math
 F=[h_1,h_2,\dots,h_m]\in \mathbb{R}^{n\times m}.
-$$
+```
 
 随机初始化给出：
 
-$$
+```math
 w_1,w_2,\dots,w_m \overset{\mathrm{iid}}{\sim} P_W.
-$$
+```
 
 因此：
 
-$$
+```math
 h_1,h_2,\dots,h_m
-$$
+```
 
 作为随机向量也是 iid 或近似 iid。但是需要强调：
 
-$$
-\text{statistical independence} \neq \text{orthogonality}.
-$$
+> **要点**：statistical independence != orthogonality
 
 也就是说，随机初始化给出的是概率意义上的独立，不意味着一次具体初始化中：
 
-$$
+```math
 h_i^\top h_j=0.
-$$
+```
 
 大宽度的作用不是让任意一对 $h_i,h_j$ 更正交，而是让许多随机特征共同构成的平均矩阵更稳定。考虑：
 
-$$
-K_m=\frac{1}{m}FF^\top
-=
-\frac{1}{m}\sum_{j=1}^{m}h_jh_j^\top.
-$$
+```math
+K_m=\frac{1}{m}FF^\top = \frac{1}{m}\sum_{j=1}^{m}h_jh_j^\top.
+```
 
 因为每个 $h_jh_j^\top$ 是由独立随机隐藏节点产生的随机矩阵，所以：
 
-$$
-K_m
-=
-\frac{1}{m}\sum_{j=1}^{m}h_jh_j^\top
-\approx
-\mathbb{E}_w[\sigma(Xw)\sigma(Xw)^\top]
-=
-K_\infty.
-$$
+```math
+K_m = \frac{1}{m}\sum_{j=1}^{m}h_jh_j^\top \approx \mathbb{E}_w[\sigma(Xw)\sigma(Xw)^\top] = K_\infty.
+```
 
 随机波动大致满足：
 
-$$
+```math
 K_m-K_\infty=O_{\mathbb{P}}\left(\frac{1}{\sqrt{m}}\right).
-$$
+```
 
 这就是所谓的“稳定”：
 
-$$
-\boxed{
-K_m \text{ 不再强烈依赖某一次随机初始化，而是接近确定的无限宽随机特征核 }K_\infty。
-}
-$$
+> **要点**：K_m 不再强烈依赖某一次随机初始化，而是接近确定的无限宽随机特征核 K_infty。
 
 同时，单个隐藏节点对整体平均核的贡献只有：
 
-$$
+```math
 \frac{1}{m} h_jh_j^\top,
-$$
+```
 
 量级是：
 
-$$
+```math
 O\left(\frac{1}{m}\right).
-$$
+```
 
 因此当 $m$ 很大时，第 $j$ 个节点对整体平均背景的反作用很小，可以近似把其他所有节点看成一个稳定背景。这就是 Stage II 中“独立特征学习”的真正含义：
 
-$$
-\Delta w_j
-=
-\Phi(w_j;w_1,\dots,w_m).
-$$
+```math
+\Delta w_j = \Phi(w_j;w_1,\dots,w_m).
+```
 
 在大宽度稳定背景下近似变成：
 
-$$
-\Delta w_j
-\approx
-\Phi(w_j;K_\infty).
-$$
+```math
+\Delta w_j \approx \Phi(w_j;K_\infty).
+```
 
 即：
 
-$$
-\boxed{
-\text{每个隐藏节点不是物理上完全独立，而是在稳定平均场中近似解耦。}
-}
-$$
+> **要点**：每个隐藏节点不是物理上完全独立，而是在稳定平均场中近似解耦。
 
 这里必须明确区分 $n$ 和 $m$：
 
@@ -592,182 +530,135 @@ $$
 
 不能把宽度增加写成“提供更多数据”。正确表述是：
 
-$$
-\boxed{
-\text{更大宽度提供更多随机特征，不提供更多训练数据。}
-}
-$$
+> **要点**：更大宽度提供更多随机特征，不提供更多训练数据。
 
 ### 8.Y K_m = (1/m) FF^T 的含义：样本-样本相似性，而不是神经元独立性
 
-$$
+```math
 K_m=\frac{1}{m}FF^\top
-$$
+```
 
 不是用来直接检查“两个隐藏神经元是否独立”的矩阵。它的真正含义是：
 
-$$
-\boxed{
-K_m \text{ 是隐藏层随机特征诱导出的样本-样本相似性矩阵。}
-}
-$$
+> **要点**：K_m 是隐藏层随机特征诱导出的样本-样本相似性矩阵。
 
 因为：
 
-$$
+```math
 F\in\mathbb{R}^{n\times m},
-$$
+```
 
 其中第 $i$ 行：
 
-$$
-F_i=
-[\sigma(x_i^\top w_1),\sigma(x_i^\top w_2),\dots,\sigma(x_i^\top w_m)]
-$$
+```math
+F_i= [\sigma(x_i^\top w_1),\sigma(x_i^\top w_2),\dots,\sigma(x_i^\top w_m)]
+```
 
 表示第 $i$ 个样本在所有隐藏节点上的表示。于是：
 
-$$
-(K_m)_{ab}
-=
-\frac{1}{m}(FF^\top)_{ab}
-=
-\frac{1}{m}F_a\cdot F_b.
-$$
+```math
+(K_m)_{ab} = \frac{1}{m}(FF^\top)_{ab} = \frac{1}{m}F_a\cdot F_b.
+```
 
 展开为：
 
-$$
-(K_m)_{ab}
-=
-\frac{1}{m}\sum_{j=1}^{m}
-\sigma(x_a^\top w_j)\sigma(x_b^\top w_j).
-$$
+```math
+(K_m)_{ab} = \frac{1}{m}\sum_{j=1}^{m} \sigma(x_a^\top w_j)\sigma(x_b^\top w_j).
+```
 
 它表示：
 
-$$
-\boxed{
-\text{样本 }x_a\text{ 和 }x_b\text{ 在隐藏表示空间中的平均内积相似度。}
-}
-$$
+> **要点**：样本 x_a 和 x_b 在隐藏表示空间中的平均内积相似度。
 
 对角线：
 
-$$
-(K_m)_{aa}
-=
-\frac{1}{m}\sum_{j=1}^{m}
-\sigma(x_a^\top w_j)^2
-$$
+```math
+(K_m)_{aa} = \frac{1}{m}\sum_{j=1}^{m} \sigma(x_a^\top w_j)^2
+```
 
 表示样本 $x_a$ 经过隐藏层后的平均表示长度平方。非对角线：
 
-$$
+```math
 (K_m)_{ab},\quad a\ne b
-$$
+```
 
 表示样本 $x_a,x_b$ 在隐藏空间中有多相似。因此，$K_m$ 的作用是刻画：
 
-$$
-\boxed{
-\text{随机隐藏层给训练样本制造了怎样的几何结构。}
-}
-$$
+> **要点**：随机隐藏层给训练样本制造了怎样的几何结构。
 
 Stage I 中，隐藏层仍近似随机：
 
-$$
-F\approx F_0.
-$$
+```math
+F~ F_0.
+```
 
 输出层在随机特征上学习：
 
-$$
+```math
 \hat Y=FA.
-$$
+```
 
 输出层能否在随机特征上快速拟合训练集，取决于随机隐藏表示给样本制造出的几何结构，也就是：
 
-$$
+```math
 K_m=\frac{1}{m}FF^\top.
-$$
+```
 
 如果 $K_m$ 让不同样本在隐藏空间中足够可分，输出层就能在这些随机特征上插值训练标签。Stage II 中，大宽度让：
 
-$$
-K_m\approx K_\infty,
-$$
+```math
+K_m~ K_\infty,
+```
 
 使随机隐藏表示的整体背景可分析，从而支持把单个隐藏节点拿出来分析其 feature learning 动力学。
 
 精确总结是：
 
-$$
-\boxed{
-K_m \text{ 的角色是刻画样本几何与随机特征平均背景，不是直接刻画隐藏节点之间是否相似。}
-}
-$$
+> **要点**：K_m 的角色是刻画样本几何与随机特征平均背景，不是直接刻画隐藏节点之间是否相似。
 
 ### 8.Z FF^T 与 F^T F：样本几何 vs. 特征冗余
 
 同一个隐藏表示矩阵：
 
-$$
+```math
 F\in \mathbb{R}^{n\times m}
-$$
+```
 
 可以从两个方向相乘。
 
 **1. FF^T：样本-样本相似性**
 
-$$
+```math
 FF^\top\in\mathbb{R}^{n\times n}.
-$$
+```
 
 其第 $(a,b)$ 项：
 
-$$
-(FF^\top)_{ab}
-=
-F_a\cdot F_b
-=
-\sum_{j=1}^{m}F_{aj}F_{bj}.
-$$
+```math
+(FF^\top)_{ab} = F_a\cdot F_b = \sum_{j=1}^{m}F_{aj}F_{bj}.
+```
 
 含义：
 
-$$
-\boxed{
-\text{第 }a\text{ 个样本和第 }b\text{ 个样本在所有隐藏节点上的表示有多像。}
-}
-$$
+> **要点**：第 a 个样本和第 b 个样本在所有隐藏节点上的表示有多像。
 
 它刻画的问题是：隐藏层把训练样本映射成了怎样的几何结构？因此 $FF^\top$ 主要用于理解 Stage I / Stage II 中随机隐藏表示的样本几何、随机特征 kernel 和输出层插值能力。
 
 **2. F^T F：隐藏节点-隐藏节点相似性**
 
-$$
+```math
 F^\top F\in\mathbb{R}^{m\times m}.
-$$
+```
 
 其第 $(i,j)$ 项：
 
-$$
-(F^\top F)_{ij}
-=
-f_i^\top f_j
-=
-\sum_{a=1}^{n}F_{ai}F_{aj}.
-$$
+```math
+(F^\top F)_{ij} = f_i^\top f_j = \sum_{a=1}^{n}F_{ai}F_{aj}.
+```
 
 含义：
 
-$$
-\boxed{
-\text{第 }i\text{ 个隐藏节点和第 }j\text{ 个隐藏节点在所有训练样本上的激活模式有多像。}
-}
-$$
+> **要点**：第 i 个隐藏节点和第 j 个隐藏节点在所有训练样本上的激活模式有多像。
 
 它刻画的问题是：不同隐藏神经元是不是在学重复的东西？因此 $F^\top F$ 主要用于理解 Stage III 中的 feature redundancy 和 similar-feature repulsion。
 
@@ -778,11 +669,7 @@ $$
 
 最后可以压缩成一句：
 
-$$
-\boxed{
-FF^\top=\text{样本几何};\qquad F^\top F=\text{特征冗余。}
-}
-$$
+> **要点**：FF^T=样本几何; F^T F=特征冗余。
 
 ---
 
@@ -790,45 +677,39 @@ $$
 
 定义隐藏神经元激活：
 
-$$
+```math
 h_w = \sigma(Xw).
-$$
+```
 
 令 $P$ 为样本中心化投影，例如：
 
-$$
+```math
 P = I - \frac{1}{N}\mathbf{1}\mathbf{1}^\top.
-$$
+```
 
 中心化后：
 
-$$
+```math
 \tilde h_w = P h_w,
-$$
+```
 
 标签中心化为：
 
-$$
+```math
 \tilde Y = P Y.
-$$
+```
 
 可以用一个简化形式理解能量函数：
 
-$$
-E(w)
-=
-\frac{1}{2}
-\left\lVert \tilde Y^\top \tilde h_w\right\rVert^2.
-$$
+```math
+E(w) = \frac{1}{2} \left\lVert \tilde Y^\top \tilde h_w\right\rVert^2.
+```
 
 等价写成：
 
-$$
-E(w)
-=
-\frac{1}{2}
-\tilde h_w^\top \tilde Y \tilde Y^\top \tilde h_w.
-$$
+```math
+E(w) = \frac{1}{2} \tilde h_w^\top \tilde Y \tilde Y^\top \tilde h_w.
+```
 
 解释如下：
 
@@ -839,42 +720,39 @@ $$
 
 对这个简化能量求梯度。记：
 
-$$
+```math
 D_w=\mathrm{diag}(\sigma'(Xw)).
-$$
+```
 
 由于：
 
-$$
+```math
 \nabla_w h_w = X^\top D_w,
-$$
+```
 
 可得到：
 
-$$
-\nabla_w E
-=
-X^\top D_w P\tilde Y\tilde Y^\top P h_w.
-$$
+```math
+\nabla_w E = X^\top D_w P\tilde Y\tilde Y^\top P h_w.
+```
 
 隐藏层 loss 梯度的一般形式是：
 
-$$
-\nabla_w L =
-X^\top D_w G_w,
-$$
+```math
+\nabla_w L = X^\top D_w G_w,
+```
 
 其中 $G_w$ 是反传到该神经元激活向量上的有效信号。如果 Stage II 中：
 
-$$
+```math
 G_w \propto -P\tilde Y\tilde Y^\top P h_w,
-$$
+```
 
 则：
 
-$$
+```math
 -\nabla_w L \propto \nabla_w E.
-$$
+```
 
 这就是等效证明的核心：不是模型显式最大化相关性，而是原始 loss 的反向传播在 Stage II 近似产生了同一个方向。
 
@@ -882,21 +760,21 @@ $$
 
 普通 CCA 问：
 
-$$
+```math
 \max_{u,v}\mathrm{Corr}(Xu,Yv),
-$$
+```
 
 即找输入方向和标签方向，使相关性最大。这里输入侧不是线性投影 $Xu$，而是非线性特征：
 
-$$
+```math
 h_w = \sigma(Xw).
-$$
+```
 
 因此 nonlinear CCA 可以理解成：
 
-$$
+```math
 \max_w \left\lVert \tilde Y^\top \tilde h_w\right\rVert^2,
-$$
+```
 
 即找一个非线性输入特征，使它和标签结构最对齐。
 
@@ -914,47 +792,37 @@ $$
 
 高能量特征不是“激活值大”：
 
-$$
-\text{高能量特征}
-\neq
-\text{激活值大}.
-$$
+> **要点**：高能量特征 != 激活值大
 
 更准确地说：
 
-$$
-\text{高能量特征}
-=
-\text{隐藏神经元在所有样本上的激活模式，与标签结构高度对齐}.
-$$
+> **要点**：高能量特征 = 隐藏神经元在所有样本上的激活模式，与标签结构高度对齐
 
 如果 $E(w)$ 高，说明：
 
-$$
+```math
 h_w=\sigma(Xw)
-$$
+```
 
 能够被输出层高效用来解释 $Y$。注意这里的对象不是单样本激活，而是整列激活向量 $h_w$。某个神经元在一个样本上特别兴奋并不重要；重要的是它在所有样本上的响应模式是否捕捉了标签变化规律。
 
 在 modular addition 任务中：
 
-$$
+```math
 y=a+b \pmod p,
-$$
+```
 
 记忆型特征可能是：
 
-$$
+```math
 \mathbf{1}\{(a,b)=(a_0,b_0)\},
-$$
+```
 
 即只识别某一个训练 pair。结构型特征则可能是 Fourier / group representation，例如：
 
-$$
-\cos\left(\frac{2\pi k a}{p}\right),
-\quad
-\sin\left(\frac{2\pi k a}{p}\right),
-$$
+```math
+\cos\left(\frac{2\pi k a}{p}\right), \quad \sin\left(\frac{2\pi k a}{p}\right),
+```
 
 以及 $b$ 上相应的频率组合，或者更一般的 irreducible representation。
 
@@ -966,23 +834,23 @@ $$
 
 Stage II 的独立近似会在训练一段时间后失效。原因是隐藏节点已经不再随机，它们可能学到相似特征，因此：
 
-$$
+```math
 h_i^\top h_j
-$$
+```
 
 不再可以忽略。
 
 完整 loss 为：
 
-$$
+```math
 L=\frac{1}{2}\lVert FA-Y\rVert_F^2.
-$$
+```
 
 它依赖整个隐藏激活矩阵：
 
-$$
+```math
 F=[h_1,h_2,\dots,h_m].
-$$
+```
 
 当多个隐藏节点共同拟合同一个输出目标时，它们不再是独立最大化各自能量的个体，而是通过输出层、Gram 矩阵、残差和 inverse Gram 发生耦合。此时：
 
@@ -1002,21 +870,21 @@ Stage III 因此解释了两个后期现象：相似神经元之间的 repulsion
 
 Stage II 中，每个隐藏节点近似独立地沿能量函数爬升：
 
-$$
--\nabla_{w_j}L\approx c\nabla E(w_j).
-$$
+```math
+-\nabla_{w_j}L~ c\nabla E(w_j).
+```
 
 因此多个节点可能被同一个高能量特征吸引。例如在 modular addition 中，多个节点可能都学到同一个 Fourier frequency：
 
-$$
-f_1\approx f_2\approx f_3.
-$$
+```math
+f_1~ f_2~ f_3.
+```
 
 但泛化需要的是一组完整、互补的结构特征，而不是同一个特征的多份拷贝。当多个节点学到相似结构后：
 
-$$
+```math
 F^\top F
-$$
+```
 
 的非对角项变大，Stage II 的独立近似失效。此时输出层和 residual 开始产生交互：
 
@@ -1027,11 +895,7 @@ $$
 
 因此 Stage III 的本质是：
 
-$$
-\boxed{
-\text{从“很多节点各自找到高能量特征”，转向“节点之间协调，形成互补特征集合”。}
-}
-$$
+> **要点**：从“很多节点各自找到高能量特征”，转向“节点之间协调，形成互补特征集合”。
 
 用 grokking 的语言：
 
@@ -1046,114 +910,110 @@ $$
 
 关键在于，模型预测不是每个节点单独决定，而是所有隐藏节点共同决定：
 
-$$
+```math
 \hat Y=FA=\sum_{j=1}^{m}f_j a_j.
-$$
+```
 
 loss 是：
 
-$$
+```math
 L=\frac{1}{2}\left\lVert Y-\sum_{j=1}^{m}f_j a_j\right\rVert^2.
-$$
+```
 
 因此它不是每个节点各自有一个独立 loss，而是所有节点共同解释同一个目标 $Y$。残差：
 
-$$
+```math
 R=FA-Y
-$$
+```
 
 包含所有隐藏节点的贡献：
 
-$$
+```math
 R=\sum_{l=1}^{m}f_l a_l-Y.
-$$
+```
 
 对第 $j$ 个隐藏激活 $f_j$ 的梯度为：
 
-$$
+```math
 \nabla_{f_j}L = R a_j^\top.
-$$
+```
 
 虽然求的是第 $j$ 个节点的梯度，但 $R$ 本身包含所有 $f_l$。因此隐藏节点之间通过共同残差产生耦合。
 
 核心句是：
 
-$$
-\boxed{
-\text{隐藏节点互相影响，不是因为输出层非线性，而是因为它们共同竞争解释同一个残差。}
-}
-$$
+> **要点**：隐藏节点互相影响，不是因为输出层非线性，而是因为它们共同竞争解释同一个残差。
 
 ### 12.1 Inverse Gram 中的负交叉项如何产生去冗余信号
 
 固定隐藏表示 $F$ 时，输出层 ridge regression 的解为：
 
-$$
+```math
 A^*=(F^\top F+\lambda I)^{-1}F^\top Y.
-$$
+```
 
 这里出现关键矩阵：
 
-$$
+```math
 F^\top F.
-$$
+```
 
 其第 $(i,j)$ 项为：
 
-$$
+```math
 (F^\top F)_{ij}=f_i^\top f_j.
-$$
+```
 
 如果两个隐藏节点相似：
 
-$$
+```math
 f_i^\top f_j>0,
-$$
+```
 
 则 $F^\top F$ 有正的 off-diagonal 项。只看两个节点：
 
-$$
+```math
 F=[f_1,f_2].
-$$
+```
 
 则：
 
-$$
+```math
 F^\top F+\lambda I
 =
 \begin{bmatrix}
 f_1^\top f_1+\lambda & f_1^\top f_2\\
 f_2^\top f_1 & f_2^\top f_2+\lambda
 \end{bmatrix}.
-$$
+```
 
 记：
 
-$$
+```math
 a=f_1^\top f_1+\lambda,
-$$
+```
 
-$$
+```math
 c=f_2^\top f_2+\lambda,
-$$
+```
 
-$$
+```math
 b=f_1^\top f_2.
-$$
+```
 
 则：
 
-$$
+```math
 G=
 \begin{bmatrix}
 a & b\\
 b & c
 \end{bmatrix}.
-$$
+```
 
 其逆为：
 
-$$
+```math
 G^{-1}
 =
 \frac{1}{ac-b^2}
@@ -1161,83 +1021,55 @@ G^{-1}
 c & -b\\
 -b & a
 \end{bmatrix}.
-$$
+```
 
 如果：
 
-$$
+```math
 b=f_1^\top f_2>0,
-$$
+```
 
 则：
 
-$$
-(G^{-1})_{12}
-=
--\frac{b}{ac-b^2}<0.
-$$
+```math
+(G^{-1})_{12} = -\frac{b}{ac-b^2}<0.
+```
 
 因此：
 
-$$
-\boxed{
-\text{特征正相关}
-\Rightarrow
-F^\top F\text{ 有正交叉项}
-\Rightarrow
-(F^\top F+\lambda I)^{-1}\text{ 有负交叉项。}
-}
-$$
+> **要点**：特征正相关 => F^T F 有正交叉项 => (F^T F+lambda I)^{-1} 有负交叉项。
 
 反传信号中会出现类似：
 
-$$
+```math
 F(F^\top F+\lambda I)^{-1}.
-$$
+```
 
 看第 1 列：
 
-$$
-\left[F(F^\top F+\lambda I)^{-1}\right]_{\cdot 1}
-=
-q_{11}f_1+q_{21}f_2.
-$$
+```math
+\left[F(F^\top F+\lambda I)^{-1}\right]_{\cdot 1} = q_{11}f_1+q_{21}f_2.
+```
 
 其中：
 
-$$
+```math
 q_{21}<0.
-$$
+```
 
 所以：
 
-$$
-q_{11}f_1+q_{21}f_2
-=
-q_{11}f_1-|q_{21}|f_2.
-$$
+```math
+q_{11}f_1+q_{21}f_2 = q_{11}f_1-|q_{21}|f_2.
+```
 
 这说明第 1 个节点收到的有效信号里，会减去一部分与第 2 个节点相似的方向。这就是 repulsion 的数学来源：
 
-$$
-\boxed{
-\text{反传梯度中出现了“减去相似特征”的项。}
-}
-$$
+> **要点**：反传梯度中出现了“减去相似特征”的项。
 
 也可以把链条写成：
 
-$$
-\text{feature similarity}
-\Rightarrow
-\text{positive Gram off-diagonal}
-\Rightarrow
-\text{negative inverse-Gram coefficient}
-\Rightarrow
-\text{gradient subtracts similar feature}
-\Rightarrow
-\text{feature specialization}.
-$$
+> **要点**：feature similarity => positive Gram off-diagonal => negative inverse-Gram coefficient => gradient subtracts similar feature => feature specialization
 
 必须写清楚：
 
@@ -1250,150 +1082,124 @@ $$
 
 不要把 repulsion 理解成模型“意识到两个节点相似”。模型没有意识。更准确的说法是：
 
-$$
-\boxed{
-\text{模型没有意识；loss 的梯度场自动把“重复特征的边际收益低”编码进了更新方向。}
-}
-$$
+> **要点**：模型没有意识；loss 的梯度场自动把“重复特征的边际收益低”编码进了更新方向。
 
 如果两个隐藏节点：
 
-$$
-f_1\approx f_2,
-$$
+```math
+f_1~ f_2,
+```
 
 那么：
 
-$$
-f_1a_1+f_2a_2
-\approx
-f_1(a_1+a_2).
-$$
+```math
+f_1a_1+f_2a_2 \approx f_1(a_1+a_2).
+```
 
 虽然形式上有两个节点，但它们功能上只提供了一个方向：
 
-$$
-\mathrm{span}(f_1,f_2)\approx \mathrm{span}(f_1).
-$$
+```math
+\mathrm{span}(f_1,f_2)~ \mathrm{span}(f_1).
+```
 
 如果目标 $Y$ 中还有未被解释的结构，那么继续让 $f_2$ 更像 $f_1$ 并不会显著降低 loss，因为这个方向已经被覆盖了。
 
 设：
 
-$$
-Y=\text{feature A}+\text{feature B}.
-$$
+> **要点**：Y=feature A+feature B
 
 如果 $f_1$ 和 $f_2$ 都在解释 feature A，则预测可能已经覆盖 A：
 
-$$
-\hat Y\approx \text{feature A}.
-$$
+```math
+\hat Y~ \text{feature A}.
+```
 
 残差：
 
-$$
-R=Y-\hat Y\approx \text{feature B}.
-$$
+```math
+R=Y-\hat Y~ \text{feature B}.
+```
 
 反向传播来自残差，所以后续有效梯度更倾向于让某些节点去解释 feature B，而不是继续重复 feature A。
 
 因此，repulsion 更准确地说是：
 
-$$
-\boxed{
-\text{冗余方向边际收益下降，未解释残差方向边际收益更高。}
-}
-$$
+> **要点**：冗余方向边际收益下降，未解释残差方向边际收益更高。
 
 从线性空间角度，如果：
 
-$$
+```math
 f_1=f_2=f,
-$$
+```
 
 则：
 
-$$
+```math
 \mathrm{span}(f_1,f_2)=\mathrm{span}(f),
-$$
+```
 
 模型只获得一维解释能力。如果让：
 
-$$
+```math
 f_2=f+\epsilon u,
-$$
+```
 
 且 $u$ 对应残差中尚未解释的结构，那么：
 
-$$
+```math
 \mathrm{span}(f_1,f_2)
-$$
+```
 
 从近似一维扩展到二维，模型能解释更多 $Y$ 的结构，loss 会下降更多。因此所谓“推离”的动力是：
 
-$$
-\boxed{
-\text{重复节点不增加表达维度；分化节点增加表达维度，因此更能降低 loss。}
-}
-$$
+> **要点**：重复节点不增加表达维度；分化节点增加表达维度，因此更能降低 loss。
 
 Stage III 的 repulsion 可以看成一种隐式、动态的去冗余机制，类似 Gram-Schmidt 中从一个向量中减掉与另一个向量重叠的部分：
 
-$$
-f_2^\perp
-=
-f_2-\frac{f_2^\top f_1}{\lVert f_1\rVert^2}f_1.
-$$
+```math
+f_2^\perp = f_2-\frac{f_2^\top f_1}{\lVert f_1\rVert^2}f_1.
+```
 
 但神经网络不是显式执行 Gram-Schmidt，而是通过：
 
-$$
+```math
 (F^\top F+\lambda I)^{-1}
-$$
+```
 
 中的负交叉项，以及残差驱动的反向传播，自动产生类似的去重效果。
 
 总结为：
 
-$$
-\boxed{
-\text{相似节点之所以分化，是因为在共同最小化同一个 loss 时，重复特征对降低残差的边际贡献会被 inverse Gram / 投影机制扣掉，而未解释的残差方向会产生更大的梯度收益。}
-}
-$$
+> **要点**：相似节点之所以分化，是因为在共同最小化同一个 loss 时，重复特征对降低残差的边际贡献会被 inverse Gram / 投影机制扣掉，而未解释的残差方向会产生更大的梯度收益。
 ---
 
 ## 13. Top-down modulation：为什么后期会学“缺失特征”？
 
 用 residual 可以清楚解释 top-down modulation。假设目标可以分解为多个结构成分：
 
-$$
+```math
 Y = Y_1+Y_2+Y_3.
-$$
+```
 
 模型已经学到了前两个结构：
 
-$$
+```math
 \hat Y \approx Y_1+Y_2.
-$$
+```
 
 则残差为：
 
-$$
-R=Y-\hat Y\approx Y_3.
-$$
+```math
+R=Y-\hat Y~ Y_3.
+```
 
 反向传播信号主要来自残差：
 
-$$
+```math
 G_F \sim R.
-$$
+```
 
-因此后续隐藏层收到的主要信号是：
-
-$$
-\text{继续学习还没有被解释的结构}.
-$$
+因此后续隐藏层收到的主要信号是继续学习还没有被解释的结构。
 
 这就是 top-down modulation：
 
@@ -1410,29 +1216,25 @@ $$
 
 必须区分：
 
-$$
-E(w)\text{ 的峰}
-\neq
-L(W,A)\text{ 的峰}.
-$$
+> **要点**：E(w) 的峰 != L(W,A) 的峰
 
 原始训练是：
 
-$$
+```math
 \min L(W,A).
-$$
+```
 
 Stage II 单个隐藏神经元的有效动力学是：
 
-$$
+```math
 \max E(w_j).
-$$
+```
 
 二者通过梯度关系连接：
 
-$$
+```math
 -\nabla_{w_j}L \approx c\nabla_{w_j}E(w_j).
-$$
+```
 
 因此：
 
@@ -1444,15 +1246,15 @@ $$
 
 局部能量峰可以定义为：
 
-$$
+```math
 \nabla E(w)=0,
-$$
+```
 
 且：
 
-$$
+```math
 \nabla^2 E(w)\preceq 0.
-$$
+```
 
 在 group arithmetic 任务中，论文证明某些局部极值对应群的 irreducible representations；在 modular addition 中对应 Fourier basis。这个结论的重要性在于，它把“泛化特征”从直觉概念变成了可数学识别的对象：如果任务本身由群运算生成，那么能表达群结构的 irrep / Fourier directions 就是可泛化表征的自然基。
 
@@ -1464,25 +1266,21 @@ $$
 
 结构峰不是主观定义，而是在 group arithmetic 任务中由群表示理论给出。考虑群运算任务：
 
-$$
+```math
 (g,h)\mapsto gh.
-$$
+```
 
 若数据均匀覆盖群运算结构，则 $E(w)$ 的局部最大值会落在群的 irreducible representation / Fourier 子空间中。对 Abelian group / modular addition：
 
-$$
+```math
 y=a+b \pmod p,
-$$
+```
 
 结构特征对应 Fourier frequencies。
 
 因此：
 
-$$
-\text{结构峰}
-=
-E(w)\text{ 的局部最大值，且对应 irrep / Fourier representation}.
-$$
+> **要点**：结构峰 = E(w) 的局部最大值，且对应 irrep / Fourier representation
 
 结构峰能泛化，因为它抓住的是群运算的生成结构，而不是某几个训练样本。换句话说，它把很多样本背后的共同生成规律压缩到少量可组合特征中。
 
@@ -1490,39 +1288,31 @@ $$
 
 记忆峰对应 sample-specific / pair-specific 表征。例如：
 
-$$
+```math
 \mathbf{1}\{(a,b)=(a_0,b_0)\},
-$$
+```
 
 或者 one-hot pair / target slice indicator。
 
 偏分布例子：只采一个 target slice：
 
-$$
+```math
 (g,g^{-1}h)\mapsto h.
-$$
+```
 
 这种数据没有完整群结构，只包含一个 target slice。在这种情况下，能量函数的全局最优可以变成记忆型解，例如集中到某个 pair / sample coordinate：
 
-$$
+```math
 w \propto (e_{g^*},e_{g^{*-1}h}).
-$$
+```
 
 这说明：
 
-$$
-\text{偏数据}
-\Rightarrow
-\text{sample-specific feature gets highest energy}.
-$$
+> **要点**：偏数据 => sample-specific feature gets highest energy
 
 因此：
 
-$$
-\text{记忆峰}
-=
-E(w)\text{ 的最优或局部最优落在样本 / pair indicator 坐标上}.
-$$
+> **要点**：记忆峰 = E(w) 的最优或局部最优落在样本 / pair indicator 坐标上
 
 需要区分两个层面的记忆：
 
@@ -1537,34 +1327,27 @@ $$
 
 经验能量可以写成：
 
-$$
-E_S(w)
-=
-\frac{1}{|S|}
-\sum_{(x_i,y_i)\in S}
-e(w;x_i,y_i).
-$$
+```math
+E_S(w) = \frac{1}{|S|} \sum_{(x_i,y_i)\in S} e(w;x_i,y_i).
+```
 
 population energy 为：
 
-$$
-E_{\mathcal{D}}(w)
-=
-\mathbb{E}_{(x,y)\sim \mathcal{D}}
-[e(w;x,y)].
-$$
+```math
+E_{\mathcal{D}}(w) = \mathbb{E}_{(x,y)\sim \mathcal{D}} [e(w;x,y)].
+```
 
 有限训练集上：
 
-$$
+```math
 E_S(w)=E_{\mathcal{D}}(w)+\epsilon_S(w),
-$$
+```
 
 其中：
 
-$$
+```math
 \epsilon_S(w)
-$$
+```
 
 是采样误差和分布偏差。
 
@@ -1579,9 +1362,9 @@ $$
 
 如果 $S$ 均匀覆盖真实任务结构：
 
-$$
-E_S(w)\approx E_{\mathcal{D}}(w),
-$$
+```math
+E_S(w)~ E_{\mathcal{D}}(w),
+```
 
 采样噪声变小，真实结构峰稳定存在。在 group arithmetic 中，结构峰对应 irreps / Fourier features。
 
@@ -1589,11 +1372,7 @@ $$
 
 ### 16.2 少量数据
 
-少量数据导致：
-
-$$
-\epsilon_S(w)\text{ 大}.
-$$
+少量数据导致采样误差和分布偏差项 $\epsilon_S(w)$ 变大。
 
 因此：
 
@@ -1603,19 +1382,11 @@ $$
 
 严谨表述是：
 
-$$
-\text{少数据}
-\not\Rightarrow
-\text{必然记忆},
-$$
+> **要点**：少数据 !=> 必然记忆
 
 而是：
 
-$$
-\text{少数据}
-\Rightarrow
-\text{结构峰稳定性不能保证}.
-$$
+> **要点**：少数据 => 结构峰稳定性不能保证
 
 少数据仍可能泛化，如果采样恰好覆盖了关键结构；但理论上，经验能量相对于 population energy 的偏差更大，记忆峰或 shortcut 峰更容易竞争。
 
@@ -1625,11 +1396,7 @@ $$
 
 因此：
 
-$$
-\text{偏分布}
-\Rightarrow
-\text{记忆峰可能成为 global optimum}.
-$$
+> **要点**：偏分布 => 记忆峰可能成为 global optimum
 
 这说明数据质量不等价于数据数量。即使样本数不少，如果覆盖方式破坏了任务结构，经验能量仍可能被错误地塑造成偏向记忆或 shortcut 的景观。
 
@@ -1637,46 +1404,33 @@ $$
 
 不要把它写成训练过程中山真的在变。更严谨的说法是：对于不同数据集 $S_1,S_2$，对应不同经验能量函数：
 
-$$
+```math
 S_1\Rightarrow E_{S_1}(w),
-$$
+```
 
-$$
+```math
 S_2\Rightarrow E_{S_2}(w).
-$$
+```
 
 当数据少或偏时，可能出现：
 
-$$
-E_S(w_{\text{mem}})
->
-E_S(w_{\text{gen}}),
-$$
+> **要点**：E_S(w_{mem}) > E_S(w_{gen})
 
 或者 $w_{\text{gen}}$ 的局部峰不稳定。
 
 当数据均匀且足够多时：
 
-$$
-E_S(w_{\text{gen}})
-\approx
-E_{\mathcal{D}}(w_{\text{gen}}),
-$$
+> **要点**：E_S(w_{gen}) ~ E_{D}(w_{gen})
 
 而记忆特征在不同样本上的贡献互相抵消：
 
-$$
-E_S(w_{\text{mem}})
-\downarrow.
-$$
+```math
+E_S(w_{\text{mem}}) \downarrow.
+```
 
 因此更可能有：
 
-$$
-E_S(w_{\text{gen}})
->
-E_S(w_{\text{mem}}).
-$$
+> **要点**：E_S(w_{gen}) > E_S(w_{mem})
 
 更精确地说：
 
@@ -1717,18 +1471,15 @@ $$
 
 **解答**：输出层梯度为：
 
-$$
+```math
 \nabla_A L=F^\top(FA-Y)+\lambda A
-$$
+```
 
 可以直接利用随机特征矩阵 $F$ 拟合标签；而：
 
-$$
-\nabla_{w_j}L
-=
-X^\top\left[((FA-Y)a_j)\odot \sigma'(Xw_j)\right]
-+\lambda w_j
-$$
+```math
+\nabla_{w_j}L = X^\top\left[((FA-Y)a_j)\odot \sigma'(Xw_j)\right] +\lambda w_j
+```
 
 还要乘随机输出权重 $a_j$ 和随机 gating $\sigma'(Xw_j)$，早期方向噪声大。
 
@@ -1744,9 +1495,9 @@ $$
 
 **解答**：二者不是全局目标相等，而是 Stage II 中隐藏神经元梯度方向等效：
 
-$$
--\nabla_{w_j}L\approx c\nabla E(w_j).
-$$
+```math
+-\nabla_{w_j}L~ c\nabla E(w_j).
+```
 
 因此原 loss 上的梯度下降，可以解释为单神经元在有效能量函数上的梯度上升。该解释依赖 Stage II 条件，不能无条件推广到所有训练阶段。
 
@@ -1758,22 +1509,20 @@ $$
 
 **解答**：隐藏特征相关时，Gram 矩阵有正 off-diagonal，inverse Gram 中对应交叉项为负，反传信号会扣掉相似特征，从而推动节点分化。最简单的 $2\times2$ 推导中，若：
 
-$$
+```math
 G=
 \begin{bmatrix}
 a & b\\
 b & c
 \end{bmatrix},
 \quad b>0,
-$$
+```
 
 则：
 
-$$
-(G^{-1})_{12}
-=
--\frac{b}{ac-b^2}<0.
-$$
+```math
+(G^{-1})_{12} = -\frac{b}{ac-b^2}<0.
+```
 
 这就是 feature repulsion 的线性代数来源。
 
@@ -1785,15 +1534,15 @@ $$
 
 **解答**：大宽度本身不让一对给定隐藏节点更独立。隐藏节点作为随机变量的独立性来自 iid 随机初始化。大宽度的作用是让许多 iid 随机隐藏节点共同形成的统计量，例如：
 
-$$
+```math
 K_m=\frac{1}{m}FF^\top
-$$
+```
 
 集中到稳定期望：
 
-$$
+```math
 K_\infty=\mathbb{E}_w[\sigma(Xw)\sigma(Xw)^\top].
-$$
+```
 
 从而让每个节点面对一个稳定平均背景，并且单个节点对整体背景的贡献只有 $O(1/m)$，因此 Stage II 中可以近似解耦。
 
@@ -1805,15 +1554,15 @@ $$
 
 **解答**：二者是同一个隐藏表示矩阵的两个 Gram 视角，前者比较样本，后者比较隐藏节点。
 
-$$
+```math
 FF^\top
-$$
+```
 
 比较样本和样本，是样本几何；
 
-$$
+```math
 F^\top F
-$$
+```
 
 比较隐藏节点和隐藏节点，是特征冗余。
 
@@ -1823,21 +1572,21 @@ Stage I / II 主要关心 $FF^\top$；Stage III 的相似节点 repulsion 主要
 
 **解答**：输出是所有节点贡献之和：
 
-$$
+```math
 \hat Y=\sum_j f_j a_j.
-$$
+```
 
 loss 的残差：
 
-$$
+```math
 R=\hat Y-Y
-$$
+```
 
 包含所有节点的贡献。因此第 $j$ 个节点的梯度：
 
-$$
+```math
 \nabla_{f_j}L=Ra_j^\top
-$$
+```
 
 虽然是对 $f_j$ 求导，但其中的 $R$ 依赖所有 $f_l$。所以隐藏节点通过共同残差耦合，而不是各自独立优化。
 
@@ -1884,17 +1633,7 @@ $$
 
 对 Mechanism-Guided Trustworthy AI Systems 来说，这个框架尤其有价值。它提供了一条可操作链条：
 
-$$
-\text{data distribution}
-\rightarrow
-\text{energy landscape}
-\rightarrow
-\text{representation type}
-\rightarrow
-\text{generalization behavior}
-\rightarrow
-\text{trustworthiness}.
-$$
+> **要点**：data distribution -> energy landscape -> representation type -> generalization behavior -> trustworthiness
 
 这条链条把数据工程、优化动力学、内部机制解释和可信泛化连接起来。
 
@@ -1912,7 +1651,7 @@ $$
 
 4. 解释为什么隐藏层后续开始学习结构特征。输出层读出形成以后，反传到隐藏层的信号不再纯随机，而是携带标签结构，从而推动特征涌现。
 
-5. 将 Stage II 的隐藏层学习等价为能量函数梯度上升。单个神经元的更新可近似写作：$-\nabla_{w_j}L\approx c\nabla E(w_j)$。
+5. 将 Stage II 的隐藏层学习等价为能量函数梯度上升。单个神经元的更新可近似写作：$-\nabla_{w_j}L~ c\nabla E(w_j)$。
 
 6. 将能量函数的局部极值和 feature emergence 联系起来。隐藏神经元最终学到什么，取决于它落入哪个局部能量峰的吸引盆。
 
@@ -1934,7 +1673,7 @@ $$
 
 3. 三阶段 transition time 尚未完整理论化。论文提供了 regime-level 描述和诊断指标，但没有给出对所有设置通用的 epoch-level transition law。
 
-4. 能量函数等价依赖 Stage II 条件。若 $G_F$ 的结构不满足，或隐藏节点已经强耦合，则 $-\nabla_{w_j}L\approx c\nabla E(w_j)$ 这一解释不成立或需要修正。
+4. 能量函数等价依赖 Stage II 条件。若 $G_F$ 的结构不满足，或隐藏节点已经强耦合，则 $-\nabla_{w_j}L~ c\nabla E(w_j)$ 这一解释不成立或需要修正。
 
 5. 大宽度、随机初始化、相关矩阵近似对角等假设在真实网络中未必完全成立。真实模型中存在 layer norm、residual stream、attention routing、optimizer state 等因素，它们会改变梯度传播结构。
 
@@ -1958,9 +1697,9 @@ $$
 
 核心研究问题是：类似
 
-$$
+```math
 -\nabla L \approx \nabla E
-$$
+```
 
 的等价能否在 Transformer 的 attention heads、MLP neurons、residual stream subspaces 中被观测？
 
@@ -1968,7 +1707,7 @@ $$
 
 - 记录训练中不同层的 representation；
 - 计算特征与标签结构 / task structure 的 alignment；
-- 观察是否存在 Stage I $\rightarrow$ Stage II $\rightarrow$ Stage III 类似动力学；
+- 观察是否存在 Stage I $->$ Stage II $->$ Stage III 类似动力学；
 - 对 attention head 的 query-key-value 子空间分别定义能量或 alignment；
 - 对 MLP neuron、residual direction、SAE feature 分别计算 feature-label CCA score；
 - 用 causal intervention 验证高能量结构特征是否真的支持泛化。
@@ -2032,9 +1771,9 @@ $$
 
 任务：
 
-$$
+```math
 y=a+b \mod p.
-$$
+```
 
 实验设置：
 
@@ -2050,17 +1789,17 @@ $$
 
 记录以下指标：
 
-$$
+```math
 \mathrm{Align}(G_F, YY^\top F),
-$$
+```
 
-$$
+```math
 \frac{\left\lVert F^\top F-\mathrm{diag}(F^\top F)\right\rVert_F}{\left\lVert F^\top F\right\rVert_F},
-$$
+```
 
-$$
+```math
 \cos(-\nabla_w L,\nabla_w E).
-$$
+```
 
 验证 Stage I / II / III 是否成立：
 
@@ -2072,9 +1811,9 @@ $$
 
 只采某个 target slice：
 
-$$
+```math
 a+b=c.
-$$
+```
 
 观察隐藏特征是否变成 sample / pair indicator，而不是 Fourier structure。可用以下指标比较：
 
