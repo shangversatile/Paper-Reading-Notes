@@ -245,7 +245,7 @@ $$
 设平方损失为：
 
 $$
-L = \frac12\lVert FA - Y\rVert_F^2
+L = \frac{1}{2}\lVert FA - Y\rVert_F^2
 + \frac{\lambda}{2}\lVert A\rVert_F^2
 + \frac{\lambda}{2}\lVert W\rVert_F^2,
 $$
@@ -462,7 +462,7 @@ $$
 设固定训练集：
 
 $$
-X\in \mathbb R^{n\times d},
+X\in \mathbb{R}^{n\times d},
 $$
 
 隐藏层宽度为：
@@ -474,25 +474,25 @@ $$
 隐藏权重为：
 
 $$
-W=[w_1,w_2,\dots,w_m]\in \mathbb R^{d\times m}.
+W=[w_1,w_2,\dots,w_m]\in \mathbb{R}^{d\times m}.
 $$
 
 第 \(j\) 个隐藏节点在所有样本上的激活向量为：
 
 $$
-h_j=\sigma(Xw_j)\in \mathbb R^n,
+h_j=\sigma(Xw_j)\in \mathbb{R}^n,
 $$
 
 隐藏层表示矩阵为：
 
 $$
-F=[h_1,h_2,\dots,h_m]\in \mathbb R^{n\times m}.
+F=[h_1,h_2,\dots,h_m]\in \mathbb{R}^{n\times m}.
 $$
 
 随机初始化给出：
 
 $$
-w_1,w_2,\dots,w_m \overset{iid}{\sim} P_W.
+w_1,w_2,\dots,w_m \overset{\mathrm{iid}}{\sim} P_W.
 $$
 
 因此：
@@ -528,7 +528,7 @@ K_m
 =
 \frac{1}{m}\sum_{j=1}^{m}h_jh_j^\top
 \approx
-\mathbb E_w[\sigma(Xw)\sigma(Xw)^\top]
+\mathbb{E}_w[\sigma(Xw)\sigma(Xw)^\top]
 =
 K_\infty.
 $$
@@ -536,7 +536,7 @@ $$
 随机波动大致满足：
 
 $$
-K_m-K_\infty=O_{\mathbb P}\left(\frac1{\sqrt m}\right).
+K_m-K_\infty=O_{\mathbb{P}}\left(\frac{1}{\sqrt{m}}\right).
 $$
 
 这就是所谓的“稳定”：
@@ -550,13 +550,13 @@ $$
 同时，单个隐藏节点对整体平均核的贡献只有：
 
 $$
-\frac1m h_jh_j^\top,
+\frac{1}{m} h_jh_j^\top,
 $$
 
 量级是：
 
 $$
-O\left(\frac1m\right).
+O\left(\frac{1}{m}\right).
 $$
 
 因此当 \(m\) 很大时，第 \(j\) 个节点对整体平均背景的反作用很小，可以近似把其他所有节点看成一个稳定背景。这就是 Stage II 中“独立特征学习”的真正含义：
@@ -587,7 +587,7 @@ $$
 
 | 符号 | 含义 | 增大后稳定什么 | 在论文中的角色 |
 | --- | --- | --- | --- |
-| \(n\) | 训练样本数 | 经验能量 \(E_S\) 接近真实任务能量 \(E_{\mathcal D}\) | 决定记忆峰 / 结构峰 |
+| \(n\) | 训练样本数 | 经验能量 \(E_S\) 接近真实任务能量 \(E_{\mathcal{D}}\) | 决定记忆峰 / 结构峰 |
 | \(m\) | 隐藏层宽度 / 随机特征数 | 随机特征核 \(K_m\) 接近 \(K_\infty\) | 支撑 Stage II 的独立节点动力学 |
 
 不能把宽度增加写成“提供更多数据”。正确表述是：
@@ -598,10 +598,10 @@ $$
 }
 $$
 
-### 8.Y \(K_m=\frac1mFF^\top\) 的含义：样本-样本相似性，而不是神经元独立性
+### 8.Y \(K_m=\frac{1}{m}FF^\top\) 的含义：样本-样本相似性，而不是神经元独立性
 
 $$
-K_m=\frac1mFF^\top
+K_m=\frac{1}{m}FF^\top
 $$
 
 不是用来直接检查“两个隐藏神经元是否独立”的矩阵。它的真正含义是：
@@ -615,7 +615,7 @@ $$
 因为：
 
 $$
-F\in\mathbb R^{n\times m},
+F\in\mathbb{R}^{n\times m},
 $$
 
 其中第 \(i\) 行：
@@ -630,9 +630,9 @@ $$
 $$
 (K_m)_{ab}
 =
-\frac1m(FF^\top)_{ab}
+\frac{1}{m}(FF^\top)_{ab}
 =
-\frac1mF_a\cdot F_b.
+\frac{1}{m}F_a\cdot F_b.
 $$
 
 展开为：
@@ -640,7 +640,7 @@ $$
 $$
 (K_m)_{ab}
 =
-\frac1m\sum_{j=1}^{m}
+\frac{1}{m}\sum_{j=1}^{m}
 \sigma(x_a^\top w_j)\sigma(x_b^\top w_j).
 $$
 
@@ -657,7 +657,7 @@ $$
 $$
 (K_m)_{aa}
 =
-\frac1m\sum_{j=1}^{m}
+\frac{1}{m}\sum_{j=1}^{m}
 \sigma(x_a^\top w_j)^2
 $$
 
@@ -690,7 +690,7 @@ $$
 输出层能否在随机特征上快速拟合训练集，取决于随机隐藏表示给样本制造出的几何结构，也就是：
 
 $$
-K_m=\frac1mFF^\top.
+K_m=\frac{1}{m}FF^\top.
 $$
 
 如果 \(K_m\) 让不同样本在隐藏空间中足够可分，输出层就能在这些随机特征上插值训练标签。Stage II 中，大宽度让：
@@ -714,7 +714,7 @@ $$
 同一个隐藏表示矩阵：
 
 $$
-F\in \mathbb R^{n\times m}
+F\in \mathbb{R}^{n\times m}
 $$
 
 可以从两个方向相乘。
@@ -722,7 +722,7 @@ $$
 **1. \(FF^\top\)：样本-样本相似性**
 
 $$
-FF^\top\in\mathbb R^{n\times n}.
+FF^\top\in\mathbb{R}^{n\times n}.
 $$
 
 其第 \((a,b)\) 项：
@@ -748,7 +748,7 @@ $$
 **2. \(F^\top F\)：隐藏节点-隐藏节点相似性**
 
 $$
-F^\top F\in\mathbb R^{m\times m}.
+F^\top F\in\mathbb{R}^{m\times m}.
 $$
 
 其第 \((i,j)\) 项：
@@ -817,7 +817,7 @@ $$
 $$
 E(w)
 =
-\frac12
+\frac{1}{2}
 \left\lVert \tilde Y^\top \tilde h_w\right\rVert^2.
 $$
 
@@ -826,7 +826,7 @@ $$
 $$
 E(w)
 =
-\frac12
+\frac{1}{2}
 \tilde h_w^\top \tilde Y \tilde Y^\top \tilde h_w.
 $$
 
@@ -975,7 +975,7 @@ $$
 完整 loss 为：
 
 $$
-L=\frac12\lVert FA-Y\rVert_F^2.
+L=\frac{1}{2}\lVert FA-Y\rVert_F^2.
 $$
 
 它依赖整个隐藏激活矩阵：
@@ -1053,7 +1053,7 @@ $$
 loss 是：
 
 $$
-L=\frac12\left\lVert Y-\sum_{j=1}^{m}f_j a_j\right\rVert^2.
+L=\frac{1}{2}\left\lVert Y-\sum_{j=1}^{m}f_j a_j\right\rVert^2.
 $$
 
 因此它不是每个节点各自有一个独立 loss，而是所有节点共同解释同一个目标 \(Y\)。残差：
@@ -1156,7 +1156,7 @@ $$
 $$
 G^{-1}
 =
-\frac1{ac-b^2}
+\frac{1}{ac-b^2}
 \begin{bmatrix}
 c & -b\\
 -b & a
@@ -1548,16 +1548,16 @@ $$
 population energy 为：
 
 $$
-E_{\mathcal D}(w)
+E_{\mathcal{D}}(w)
 =
-\mathbb E_{(x,y)\sim \mathcal D}
+\mathbb{E}_{(x,y)\sim \mathcal{D}}
 [e(w;x,y)].
 $$
 
 有限训练集上：
 
 $$
-E_S(w)=E_{\mathcal D}(w)+\epsilon_S(w),
+E_S(w)=E_{\mathcal{D}}(w)+\epsilon_S(w),
 $$
 
 其中：
@@ -1580,7 +1580,7 @@ $$
 如果 \(S\) 均匀覆盖真实任务结构：
 
 $$
-E_S(w)\approx E_{\mathcal D}(w),
+E_S(w)\approx E_{\mathcal{D}}(w),
 $$
 
 采样噪声变小，真实结构峰稳定存在。在 group arithmetic 中，结构峰对应 irreps / Fourier features。
@@ -1660,7 +1660,7 @@ $$
 $$
 E_S(w_{\text{gen}})
 \approx
-E_{\mathcal D}(w_{\text{gen}}),
+E_{\mathcal{D}}(w_{\text{gen}}),
 $$
 
 而记忆特征在不同样本上的贡献互相抵消：
@@ -1779,26 +1779,26 @@ $$
 
 ### Q10. 更多数据如何影响泛化？
 
-更多且更均匀的数据让 \(E_S(w)\) 接近 population energy \(E_{\mathcal D}(w)\)，结构峰稳定存在；少量或偏分布数据会让经验景观偏离真实结构，记忆峰或 shortcut 峰可能主导。关键不是“数据多”本身，而是数据是否覆盖真实生成结构。
+更多且更均匀的数据让 \(E_S(w)\) 接近 population energy \(E_{\mathcal{D}}(w)\)，结构峰稳定存在；少量或偏分布数据会让经验景观偏离真实结构，记忆峰或 shortcut 峰可能主导。关键不是“数据多”本身，而是数据是否覆盖真实生成结构。
 ### Q: 大宽度为什么与隐藏节点独立有关？
 
 大宽度本身不让一对给定隐藏节点更独立。隐藏节点作为随机变量的独立性来自 iid 随机初始化。大宽度的作用是让许多 iid 随机隐藏节点共同形成的统计量，例如：
 
 $$
-K_m=\frac1mFF^\top
+K_m=\frac{1}{m}FF^\top
 $$
 
 集中到稳定期望：
 
 $$
-K_\infty=\mathbb E_w[\sigma(Xw)\sigma(Xw)^\top].
+K_\infty=\mathbb{E}_w[\sigma(Xw)\sigma(Xw)^\top].
 $$
 
 从而让每个节点面对一个稳定平均背景，并且单个节点对整体背景的贡献只有 \(O(1/m)\)，因此 Stage II 中可以近似解耦。
 
 ### Q: \(K_m\) 是用来衡量隐藏节点独立性的吗？
 
-不是。\(K_m=\frac1mFF^\top\) 衡量的是样本-样本相似性，即不同训练样本经过隐藏层后的表示有多像。它用于理解随机隐藏表示的样本几何、Stage I 的随机特征插值和 Stage II 的稳定平均背景。隐藏节点之间是否相似应看 \(F^\top F\)。
+不是。\(K_m=\frac{1}{m}FF^\top\) 衡量的是样本-样本相似性，即不同训练样本经过隐藏层后的表示有多像。它用于理解随机隐藏表示的样本几何、Stage I 的随机特征插值和 Stage II 的稳定平均背景。隐藏节点之间是否相似应看 \(F^\top F\)。
 
 ### Q: \(FF^\top\) 和 \(F^\top F\) 有什么区别？
 
@@ -2001,7 +2001,7 @@ $$
 
 - 数据量不是唯一关键；
 - 关键是数据是否覆盖真实结构；
-- 可以设计 curriculum / active sampling，让 \(E_S\) 更接近 \(E_{\mathcal D}\)；
+- 可以设计 curriculum / active sampling，让 \(E_S\) 更接近 \(E_{\mathcal{D}}\)；
 - 可以用数据分布抑制记忆峰，增强结构峰。
 
 具体做法包括：
@@ -2120,7 +2120,7 @@ $$
 
 > 对 mechanistic interpretability 来说，这篇论文的启发是：真正值得追踪的不是模型什么时候 train accuracy 上升，而是隐藏表征什么时候从 sample-specific interpolation 转向 structure-specific representation。
 
-这次讨论进一步澄清了 Li₂ 框架中“独立”与“交互”的精确含义。Stage II 的 independent feature learning 并不是说隐藏节点之间没有任何数学联系，而是说在 iid 随机初始化和大宽度集中下，随机特征核 \(K_m=\frac1mFF^\top\) 接近稳定平均场，单个节点对整体背景影响为 \(O(1/m)\)，因此每个节点的动力学可以近似解耦。Stage III 则是在节点学到结构后，\(F^\top F\) 的非对角项开始显著，隐藏节点之间的冗余无法再忽略。此时输出层的联合 ridge 解通过 \((F^\top F+\lambda I)^{-1}\) 产生负交叉项，相似节点的重叠贡献被扣除，残差中尚未解释的结构产生更强梯度，于是隐藏特征从重复走向分工。这个过程不是模型“意识到”冗余，而是 loss geometry、projection residual 与 inverse Gram 共同编码出的优化动力学。
+这次讨论进一步澄清了 Li₂ 框架中“独立”与“交互”的精确含义。Stage II 的 independent feature learning 并不是说隐藏节点之间没有任何数学联系，而是说在 iid 随机初始化和大宽度集中下，随机特征核 \(K_m=\frac{1}{m}FF^\top\) 接近稳定平均场，单个节点对整体背景影响为 \(O(1/m)\)，因此每个节点的动力学可以近似解耦。Stage III 则是在节点学到结构后，\(F^\top F\) 的非对角项开始显著，隐藏节点之间的冗余无法再忽略。此时输出层的联合 ridge 解通过 \((F^\top F+\lambda I)^{-1}\) 产生负交叉项，相似节点的重叠贡献被扣除，残差中尚未解释的结构产生更强梯度，于是隐藏特征从重复走向分工。这个过程不是模型“意识到”冗余，而是 loss geometry、projection residual 与 inverse Gram 共同编码出的优化动力学。
 这也改变了我对 trustworthy generalization 的理解。一个模型在训练集或普通测试集上表现好，只能说明它在某个分布切片上行为正确；真正可信的模型还需要内部机制证据，说明它的预测来自稳定结构，而不是来自偶然相关、数据泄漏、模板记忆或局部 shortcut。本文提供了一种可以继续扩展的理论路线：用训练动力学解释表征涌现，用能量景观区分记忆峰和结构峰，用机制诊断连接内部表示和外部泛化。
 
 ---
@@ -2135,7 +2135,7 @@ $$
 2. **能量函数原文精确记号**
    本笔记使用
    $$
-   E(w)=\frac12\lVert \tilde Y^\top \tilde h_w\rVert^2
+   E(w)=\frac{1}{2}\lVert \tilde Y^\top \tilde h_w\rVert^2
    $$
    作为简化解释。原文可能包含更精确的中心化、归一化、输出维度、regularization、population / empirical 版本以及 nonlinear CCA 表述，需要逐式核对。
 
