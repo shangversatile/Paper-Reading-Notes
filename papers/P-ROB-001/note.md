@@ -10,7 +10,7 @@
 **Paper ID:** P-ROB-001
 **Reading Status:** Reading
 
-**Current close-reading scope:** whole-paper framework, Introduction-level motivation, prerequisite probability/randomness clarifications, Section 2.1 vanilla split conformal prediction, and the Appendix A.2 randomized-score rank-coverage proof skeleton.
+**Current close-reading scope:** whole-paper framework, Introduction-level motivation, prerequisite probability/randomness clarifications, Section 2.1 vanilla split conformal prediction first-pass foundations, Appendix A.2 randomized-score rank-coverage proof skeleton, and formal transition readiness for Section 2.2.
 
 **Explicitly deferred:** Section 2.2 full RSCP derivation, Section 3, Theorem 1, Corollary 2, Empirical Bernstein refinement, PTT, RCT, experiments, final critique, and final research questions.
 
@@ -23,7 +23,7 @@ This note remains a research-reading workspace. Do not add DOI, OpenReview ID, a
 **Reading Tier:** Tier 1
 **Primary Track:** Robustness and Robust Reliability
 **Related Project:** Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift
-**Current Reading Scope:** foundational framework and Section 2.1 foundations completed; paper still Reading
+**Current Reading Scope:** foundational framework and Section 2.1 first-pass foundations substantially complete; Section 2.2 ready / beginning; paper still Reading
 
 **Secondary Topics:**
 
@@ -129,6 +129,26 @@ For finite `N_MC`, these are different mathematical objects. The paper's Section
 
 The third obstacle is efficiency. Robust certification can require threshold inflation. Inflated thresholds can make prediction sets large or even trivial. PTT and RCT are later-paper mechanisms intended to improve prediction-set efficiency, but this note has not yet completed those sections.
 
+The Section 2.1 foundation now has a precise causal chain:
+
+```text
+user-specified target coverage 1-alpha
+        v
+required pooled rank k
+        v
+calibration empirical quantile / threshold tau
+        v
+candidate-label score comparison
+        v
+prediction set C(x)
+        v
+true-label membership event
+        v
+marginal finite-sample coverage
+```
+
+This chain is the clean conformal mechanism that Section 2.2 must modify for adversarially perturbed test inputs.
+
 ### Four Evaluation Axes
 
 The paper should be evaluated along four separate axes:
@@ -154,6 +174,22 @@ Adversarial perturbation attacks this rank mechanism indirectly. The calibration
 Randomized smoothing changes the score as a function of input. Instead of evaluating the base score at `x`, it averages the score under Gaussian perturbations around `x`. After an inverse Gaussian CDF transform, the smoothed score has a certified Lipschitz-type relation under `L_2` perturbations. This creates a bridge from clean membership to adversarial membership by inflating the conformal threshold.
 
 The implementation problem is that Gaussian averaging is an expectation, while the computer computes a sample average. LLN says the average converges asymptotically; CLT gives an approximate large-sample error distribution; Hoeffding gives the finite-sample high-probability control needed for a certificate.
+
+At the end of Section 2.1, the key transition is:
+
+```text
+clean exchangeable scores
+        v
+rank-calibrated threshold
+        v
+clean marginal coverage
+        v
+adversarial test score is no longer in the same exchangeable score sequence
+        v
+need a certified clean-to-attacked score transfer
+```
+
+RSCP does not make the attacked score magically exchangeable with clean calibration scores. It introduces a different bridge: a robustness relation between a clean robust score and an attacked robust score.
 
 ### Whole-Paper Dependency Graph
 
@@ -252,6 +288,32 @@ This section contains two layers:
 2. the paper's Section 2.1 vanilla split conformal prediction foundations.
 
 Later sections must not assume these objects are interchangeable.
+
+### Local Navigation for the Foundation Layer
+
+The intended reading order of this section is:
+
+```text
+prerequisite randomness and perturbation distinctions
+        v
+vanilla split conformal objects
+        v
+target coverage semantics
+        v
+rank-to-threshold derivation
+        v
+coverage event equivalence
+        v
+marginal probability interpretation
+        v
+efficiency and model-quality interpretation
+        v
+adversarial failure of clean rank symmetry
+        v
+ready state for Section 2.2 RSCP
+```
+
+This is not a second template. It is a map for the expanded Section 2.1 proof logic.
 
 ### Foundational Clarifications Before the Formal Derivations
 
@@ -997,6 +1059,136 @@ Later RSCP+ arguments must also distinguish population smoothing randomness from
 
 ### Section 2.1 - Vanilla Split Conformal Prediction
 
+#### Central Causal Chain
+
+**Derived explanation.** The basic split conformal pipeline should be read as a sequence of different objects, not as one vague "confidence" number:
+
+```text
+user-specified target coverage 1-alpha
+        v
+required pooled rank k
+        v
+calibration empirical quantile / threshold tau
+        v
+candidate-label score comparison
+        v
+prediction set C(x)
+        v
+true-label membership event
+        v
+marginal finite-sample coverage
+```
+
+Each arrow has a different mathematical meaning. The user chooses `1-\alpha`. The rank `k` is determined by finite-sample coverage arithmetic. The threshold `tau` is calibrated from held-out true-label scores after the predictive model and score function are fixed. The prediction set is built by comparing each candidate-label score to `tau`. Coverage follows only after translating true-label membership into a true-label score event.
+
+#### Target Coverage Is a Requirement
+
+The quantity:
+
+```math
+1-\alpha
+```
+
+is a user-specified target marginal coverage level chosen before running the conformal procedure. For example:
+
+```math
+1-\alpha=0.8.
+```
+
+The intended coverage statement is:
+
+```math
+\mathbb P
+\left(
+Y_{\mathrm{new}}
+\in
+C(X_{\mathrm{new}})
+\right)
+\geq
+0.8.
+```
+
+This is not the classifier accuracy statement:
+
+```math
+\mathbb P
+\left(
+\widehat Y=Y
+\right)
+\geq
+0.8.
+```
+
+It is also not a statement that, for a single already-realized test input, the prediction set has "80 percent confidence." Before realization, the theorem controls a population probability over future calibration/test randomness. After realization, either the realized true label is in the realized set or it is not.
+
+#### Target Coverage Versus Calibration Threshold
+
+The target `1-\alpha` is specified by the user. The threshold `\tau` is a data-dependent calibrated quantity determined jointly by:
+
+* the fixed predictive model;
+* the chosen score function;
+* the held-out calibration sample;
+* the chosen target coverage level.
+
+The threshold is not a trained model parameter. More precisely:
+
+> `\tau` is calibrated from held-out calibration scores after the predictive model has been fixed.
+
+For fixed calibration scores:
+
+```math
+1-\alpha \uparrow
+\quad\Longrightarrow\quad
+k \uparrow.
+```
+
+Since empirical order statistics are monotone in the requested rank:
+
+```math
+k_1\leq k_2
+\quad\Longrightarrow\quad
+S_{(k_1)}
+\leq
+S_{(k_2)}.
+```
+
+Thus the calibrated threshold is weakly nondecreasing as requested coverage increases.
+
+With the paper's nonconformity convention:
+
+```math
+C(x;\tau)
+=
+\{
+y\in[K]:
+S(x,y)\leq\tau
+\},
+```
+
+we have:
+
+```math
+\tau_1\leq\tau_2
+\quad\Longrightarrow\quad
+C(x;\tau_1)
+\subseteq
+C(x;\tau_2).
+```
+
+Therefore:
+
+```text
+higher requested coverage
+        v
+more permissive threshold
+        v
+weakly larger prediction set
+        v
+lower informativeness
+```
+
+This is the most basic version of the coverage-efficiency tension that later robust methods must confront.
+
 #### Dataset and Split
 
 **Paper statement / derived explanation.** Let the full realized dataset be:
@@ -1152,6 +1344,44 @@ S_{\mathrm{HPS}}(x,1)
 
 Higher model probability gives lower nonconformity.
 
+For HPS, membership in the conformal set has a simple equivalent form:
+
+```math
+S_{\mathrm{HPS}}(x,y)
+\leq
+\tau
+```
+
+if and only if:
+
+```math
+1-\widehat\pi_y(x)
+\leq
+\tau,
+```
+
+which is equivalent to:
+
+```math
+\widehat\pi_y(x)
+\geq
+1-\tau.
+```
+
+Thus:
+
+```text
+tau larger
+        v
+required classifier score 1-tau becomes smaller
+        v
+more labels satisfy membership
+        v
+prediction set becomes larger
+```
+
+This makes the efficiency effect visible in one line of algebra. For a high threshold, even labels with modest classifier scores can enter the prediction set.
+
 #### APS
 
 The adaptive prediction score is a randomized score. Let:
@@ -1227,6 +1457,20 @@ S(X_{n+1},Y_{n+1}).
 
 Therefore calibration must estimate the distribution of the same random variable: the score of the true label under a fresh example.
 
+This is why the calibration stage does not pool:
+
+```math
+S(X_i,1),\ldots,S(X_i,K)
+```
+
+into the same empirical distribution. The theorem is not trying to guarantee that every candidate-label score behaves like a true-label score. It is trying to guarantee that the random variable:
+
+```math
+S(X_{\mathrm{new}},Y_{\mathrm{new}})
+```
+
+falls below the threshold with high probability. Wrong-label scores matter for efficiency because they determine how many false candidate labels also pass the threshold, but they are not the calibration target for marginal coverage.
+
 #### Prediction Set
 
 Given a threshold `tau`, the paper's prediction set form is:
@@ -1255,6 +1499,22 @@ if and only if:
 S(X_{n+1},Y_{n+1})
 \leq
 \tau.
+```
+
+Equivalently, as events:
+
+```math
+\{
+Y_{n+1}
+\in
+C(X_{n+1};\tau)
+\}
+=
+\{
+S(X_{n+1},Y_{n+1})
+\leq
+\tau
+\}.
 ```
 
 This equivalence is why conformal coverage can be proved by controlling the rank of the test true-label score.
@@ -1287,12 +1547,26 @@ i.i.d. variables imply exchangeability, but exchangeability does not necessarily
 
 #### Rank Argument
 
-Define:
+Define calibration true-label scores:
 
 ```math
 S_i
 =
 S(X_i,Y_i).
+```
+
+for:
+
+```math
+i=1,\ldots,n.
+```
+
+Define the future true-label score:
+
+```math
+S_{n+1}
+=
+S(X_{n+1},Y_{n+1}).
 ```
 
 If:
@@ -1303,10 +1577,26 @@ S_1,\ldots,S_n,S_{n+1}
 
 are exchangeable, then the test score `S_{n+1}` has no special index status in the pooled sample.
 
-In the no-ties simplification, define `rank(S_{n+1})` as the ascending rank of `S_{n+1}` among the `n+1` pooled scores. This rank is uniform over:
+**Pedagogical no-tie argument.** In a continuous-score or suitably randomized tie-breaking setting, define:
 
 ```math
-1,\ldots,n+1.
+R
+=
+\mathrm{rank}
+\left(
+S_{n+1};
+S_1,\ldots,S_n,S_{n+1}
+\right).
+```
+
+Here `R` is the ascending pooled rank of the test true-label score among the `n+1` scores. Rank symmetry gives:
+
+```math
+\mathbb P(R=r)
+=
+\frac{1}{n+1},
+\qquad
+r=1,\ldots,n+1.
 ```
 
 Therefore:
@@ -1314,17 +1604,38 @@ Therefore:
 ```math
 \mathbb P
 \left(
-\mathrm{rank}(S_{n+1})
-\leq
-k
+R\leq k
 \right)
 =
 \frac{k}{n+1}.
 ```
 
-With ties, the Appendix A.2 indicator proof below gives the conservative inequality needed for coverage.
+The target is:
 
-Choose:
+```math
+\mathbb P(R\leq k)
+\geq
+1-\alpha.
+```
+
+Thus:
+
+```math
+\frac{k}{n+1}
+\geq
+1-\alpha.
+```
+
+Equivalently:
+
+```math
+k
+\geq
+(n+1)(1-\alpha).
+```
+
+Since `k` is an integer, the smallest feasible choice is:
+
 
 ```math
 k
@@ -1334,7 +1645,59 @@ k
 \right\rceil.
 ```
 
-Then:
+The `+1` is not an ad-hoc correction. It comes from the pooled rank space:
+
+```text
+n calibration observations
++
+1 future test observation
+```
+
+With ties, the equality `\mathbb P(R\leq k)=k/(n+1)` should not be treated as a universal theorem. The Appendix A.2 indicator proof below gives the conservative finite-sample inequality needed for coverage without relying on this no-tie simplification.
+
+#### Why the k-th Calibration Score Becomes the Threshold
+
+Let the calibration order statistics be:
+
+```math
+S_{(1)}
+\leq
+S_{(2)}
+\leq
+\cdots
+\leq
+S_{(n)}.
+```
+
+In the usual nontrivial case:
+
+```math
+k\leq n,
+```
+
+define:
+
+```math
+\widehat\tau_\alpha
+=
+S_{(k)}.
+```
+
+If the pooled test rank satisfies:
+
+```math
+R\leq k,
+```
+
+then the test score cannot be strictly larger than the `k`th calibration order statistic in the no-tie pedagogical setting. Therefore:
+
+```math
+S_{n+1}
+\leq
+\widehat\tau_\alpha.
+```
+
+Consequently:
 
 ```math
 \mathbb P
@@ -1342,10 +1705,12 @@ Then:
 S_{n+1}\leq\widehat\tau_\alpha
 \right)
 \geq
+\mathbb P(R\leq k)
+\geq
 1-\alpha.
 ```
 
-Using the prediction-set equivalence:
+Finally, using the prediction-set event equivalence:
 
 ```math
 \mathbb P
@@ -1356,7 +1721,7 @@ Y_{n+1}\in C(X_{n+1};\widehat\tau_\alpha)
 1-\alpha.
 ```
 
-This is the intuitive rank proof. Appendix A.2 uses a more formal indicator argument that also handles the quantile convention carefully.
+This is the intuitive rank proof. Appendix A.2 uses a more formal indicator argument that also handles ties and the quantile convention carefully.
 
 #### Finite-Sample Quantile Correction
 
@@ -1398,6 +1763,37 @@ q
 \right).
 ```
 
+The paper writes this threshold using `Q_{1-\alpha}`, but the empirical quantile level is the finite-sample corrected level:
+
+```math
+(1-\alpha)
+\left(
+1+\frac1n
+\right).
+```
+
+The identity:
+
+```math
+n
+(1-\alpha)
+\left(
+1+\frac1n
+\right)
+=
+(n+1)(1-\alpha)
+```
+
+shows that the paper's empirical quantile convention and the pooled-rank index:
+
+```math
+\left\lceil
+(n+1)(1-\alpha)
+\right\rceil
+```
+
+are two expressions of the same finite-sample correction.
+
 The split conformal threshold can be written as:
 
 ```math
@@ -1432,7 +1828,37 @@ S_{(n)},
 S_{(k)}.
 ```
 
-If the empirical quantile level exceeds one, the usual conservative convention is to take the threshold as `+\infty`, which returns the full label set.
+**Derived finite-sample clarification.** If:
+
+```math
+\left\lceil
+(n+1)(1-\alpha)
+\right\rceil
+>
+n,
+```
+
+then the calibration sample has no such order statistic. The usual conservative split-conformal convention is:
+
+```math
+\widehat\tau_\alpha
+=
++\infty.
+```
+
+This returns the full label set and gives the most conservative result. It also exposes a finite-sample resolution limit:
+
+```text
+small n_cal
++
+1-alpha close to 1
+        v
+required rank may exceed n
+        v
+nontrivial finite-sample calibration may be impossible
+```
+
+This is not the paper's main contribution. It is a basic finite-sample consequence of distribution-free conformal calibration.
 
 Numerical example:
 
@@ -1470,6 +1896,8 @@ C(X_{n+1})
 1-\alpha.
 ```
 
+In split conformal prediction, the fitted model is treated as fixed before calibration. The probability statement is over the random calibration/test examples and any auxiliary score randomization used symmetrically. If the training set is also random, the unconditional statement can include training randomness as well, but the rank mechanism itself is driven by exchangeability of the calibration and test true-label scores after the model has been fixed.
+
 It does not automatically imply pointwise conditional coverage:
 
 ```math
@@ -1487,6 +1915,211 @@ X_{n+1}=x
 
 for every `x`.
 
+To make the probability semantics precise, define:
+
+```math
+I
+=
+\mathbf 1
+\{
+Y\in C(X)
+\}.
+```
+
+Then:
+
+```math
+\mathbb E[I]
+=
+\mathbb P
+\left(
+Y\in C(X)
+\right).
+```
+
+Thus marginal coverage can also be written as:
+
+```math
+\mathbb E[I]
+\geq
+1-\alpha.
+```
+
+This does not mean the conformal theorem is caused by a sample mean converging to an expectation. The conformal rank theorem lower-bounds the population coverage probability. The law of large numbers only explains why an empirical average over many independent test samples can approximate that probability.
+
+There are three different objects:
+
+**A. Single realized event.** Once:
+
+```math
+(x,y,C(x))
+```
+
+are all realized:
+
+```math
+\mathbf 1
+\{
+y\in C(x)
+\}
+\in
+\{0,1\}.
+```
+
+The outcome is covered or not covered.
+
+**B. Population marginal coverage.** For a future random pair `(X,Y)`:
+
+```math
+\mathbb P
+\left(
+Y\in C(X)
+\right)
+```
+
+is the probability object controlled by the conformal theorem.
+
+**C. Empirical coverage over many test samples.** For `m` test samples:
+
+```math
+\widehat{\mathrm{cov}}_m
+=
+\frac1m
+\sum_{j=1}^{m}
+\mathbf 1
+\{
+Y_j\in C(X_j)
+\}.
+```
+
+Under appropriate conditions:
+
+```math
+\widehat{\mathrm{cov}}_m
+\to
+\mathbb P
+\left(
+Y\in C(X)
+\right).
+```
+
+The responsibilities are different:
+
+```text
+conformal rank theorem
+        v
+lower-bounds the population coverage probability
+
+LLN
+        v
+explains why large empirical test averages approximate that probability
+```
+
+They should not be reversed.
+
+Why is it called marginal? By the law of total probability:
+
+```math
+\mathbb P
+\left(
+Y\in C(X)
+\right)
+=
+\mathbb E_X
+\left[
+\mathbb P
+\left(
+Y\in C(X)
+\mid X
+\right)
+\right].
+```
+
+The marginal probability averages conditional coverage over the distribution of `X`. Good marginal coverage can therefore hide poor reliability in a low-probability or difficult region.
+
+For example, suppose:
+
+```math
+\mathbb P(X\in A)=0.8,
+```
+
+and:
+
+```math
+\mathbb P
+\left(
+Y\in C(X)
+\mid X\in A
+\right)
+=
+0.99.
+```
+
+For a harder region:
+
+```math
+\mathbb P(X\in B)=0.2,
+```
+
+and:
+
+```math
+\mathbb P
+\left(
+Y\in C(X)
+\mid X\in B
+\right)
+=
+0.60.
+```
+
+The overall marginal coverage is:
+
+```math
+0.8\times0.99
++
+0.2\times0.60
+=
+0.912.
+```
+
+The marginal coverage is `91.2` percent even though the hard region has only `60` percent coverage.
+
+Thus:
+
+```text
+good marginal coverage
+does not imply
+good conditional / subgroup coverage everywhere
+```
+
+A concrete point can still have a conditional probability before the label is realized. If only `X=x` is fixed and `Y` is still random, then:
+
+```math
+\mathbb P
+\left(
+Y\in C(x)
+\mid X=x
+\right)
+```
+
+is meaningful. After both `x` and `y` are realized, the indicator:
+
+```math
+\mathbf 1
+\{
+y\in C(x)
+\}
+```
+
+is only `0` or `1`. The distinction is:
+
+```text
+probability before realization
+is different from
+indicator after realization
+```
+
 Marginal validity does not imply uniform subgroup or conditional reliability. This distinction is critical for high-stakes and dynamic-system applications, where failure can concentrate in particular regimes.
 
 #### Why Classifier Correct Specification Is Not Required
@@ -1496,7 +2129,7 @@ The coverage proof does not rely on:
 ```math
 \widehat\pi_y(x)
 =
-P(Y=y\mid X=x).
+\mathbb P(Y=y\mid X=x).
 ```
 
 It relies on exchangeability of calibration/test true-label scores. Therefore:
@@ -1529,7 +2162,335 @@ Good score geometry tends to separate true labels from wrong labels. Then fewer 
 
 Poor score geometry creates overlap between true-label and wrong-label scores. Then many candidate labels fall below the threshold, producing larger prediction sets.
 
+#### Bad Model Does Not Break Validity - It Hurts Efficiency
+
+Consider an informative model whose true-label nonconformity scores are often small:
+
+```text
+0.10
+0.15
+0.20
+0.25
+```
+
+For a given target coverage level, the calibrated threshold `\tau` may be relatively low. Then only a small number of candidate labels satisfy:
+
+```math
+S(x,y)\leq\tau.
+```
+
+The prediction sets are small and informative.
+
+Now consider a weak model whose true-label scores are often larger:
+
+```text
+0.60
+0.75
+0.85
+0.90
+```
+
+To achieve the same target:
+
+```math
+1-\alpha,
+```
+
+the calibration threshold must allow larger true-label scores. This means `\tau` becomes larger, and wrong labels are more likely to satisfy:
+
+```math
+S(x,y)\leq\tau.
+```
+
+The prediction sets inflate.
+
+The correct interpretation is:
+
+```text
+bad base model
+does not necessarily destroy conformal marginal validity
+
+instead
+
+bad base model / bad score geometry
+        v
+larger calibrated threshold or poorer class separation
+        v
+larger prediction sets
+        v
+worse efficiency
+```
+
+This is not a vicious cycle. It is conformal prediction honestly exposing the informational weakness of the underlying predictor.
+
+#### Validity and Intelligence Are Different
+
+These questions are distinct:
+
+```text
+Conformal validity asks:
+Does the true label enter sufficiently often?
+
+Classifier quality asks:
+Can the model discriminate the correct class from alternatives?
+
+Conformal efficiency asks:
+How many alternatives must be retained to achieve validity?
+```
+
+In the extreme case:
+
+```math
+C(x)
+=
+[K]
+```
+
+gives:
+
+```math
+\mathbb P
+\left(
+Y\in C(X)
+\right)
+=
+1.
+```
+
+But its informativeness is essentially zero. This is the foundation-layer predecessor of the paper's Challenge 2: robust validity is not enough if the prediction set becomes uninformative.
+
 This is a conceptual precursor for PTT, but the PTT formulas and theory are not filled in this update.
+
+#### Formal Transition to Section 2.2 - Why Clean Rank Coverage Is Not Enough
+
+In the clean conformal setting:
+
+```math
+S_i
+=
+S(X_i,Y_i),
+\qquad
+i=1,\ldots,n+1.
+```
+
+The sequence:
+
+```math
+S_1,\ldots,S_n,S_{n+1}
+```
+
+has the exchangeability needed for the rank proof.
+
+After a test-time attack:
+
+```math
+\widetilde X_{n+1}
+=
+X_{n+1}
++
+\Delta.
+```
+
+The actual deployed test score becomes:
+
+```math
+\widetilde S_{n+1}
+=
+S(\widetilde X_{n+1},Y_{n+1}).
+```
+
+The calibration scores remain:
+
+```math
+S(X_i,Y_i),
+\qquad
+i=1,\ldots,n.
+```
+
+Therefore the sequence:
+
+```math
+S(X_1,Y_1),
+\ldots,
+S(X_n,Y_n),
+S(\widetilde X_{n+1},Y_{n+1})
+```
+
+is generally no longer exchangeable. Independence may survive, but the identical-distribution / permutation-symmetry structure generally does not.
+
+**Derived probabilistic interpretation.** If:
+
+```math
+\widetilde X
+=
+T(X),
+```
+
+then the attacked test distribution is the push-forward:
+
+```math
+P_{\widetilde X,Y}
+=
+(T,\mathrm{id})_{\#}P_{X,Y}.
+```
+
+In general:
+
+```math
+P_{\widetilde X,Y}
+\neq
+P_{X,Y}.
+```
+
+Therefore one also generally has:
+
+```math
+\mathcal L
+\left(
+S(\widetilde X,Y)
+\right)
+\neq
+\mathcal L
+\left(
+S(X,Y)
+\right).
+```
+
+This is the formal distribution-level reason adversarial perturbation breaks the ordinary true-label score rank structure.
+
+#### HPS Attack Toy Example
+
+**Pedagogical toy example.** Suppose the calibration true-label scores are:
+
+```text
+0.10, 0.15, 0.20, 0.25, 0.30
+```
+
+and:
+
+```math
+\tau=0.30.
+```
+
+For a clean test point, suppose:
+
+```math
+\widehat\pi_y(x)
+=
+0.82.
+```
+
+Then:
+
+```math
+S_{\mathrm{HPS}}(x,y)
+=
+1-0.82
+=
+0.18.
+```
+
+Since:
+
+```math
+0.18
+\leq
+0.30,
+```
+
+the true label is included.
+
+After attack, suppose:
+
+```math
+\widehat\pi_y(\widetilde x)
+=
+0.30.
+```
+
+Then:
+
+```math
+S_{\mathrm{HPS}}(\widetilde x,y)
+=
+0.70.
+```
+
+Since:
+
+```math
+0.70
+>
+0.30,
+```
+
+the true label is excluded.
+
+This toy example does not prove that every attack works this way. It only shows:
+
+```text
+clean calibration threshold
+does not itself control
+adversarially inflated test scores
+```
+
+#### Exact Bridge Needed for RSCP
+
+Vanilla conformal gives a clean-score statement:
+
+```math
+S_{\mathrm{clean}}
+\leq
+\tau
+```
+
+with the desired marginal probability under exchangeability. For an adversarial test score, the ordinary rank argument no longer directly applies.
+
+RSCP's strategy is not to claim the attacked score remains exchangeable with clean calibration scores. Instead, the needed bridge has the abstract form:
+
+```math
+S_{\mathrm{rob}}(\widetilde x,y)
+\leq
+S_{\mathrm{rob}}(x,y)
++
+M_\epsilon.
+```
+
+Then:
+
+```math
+S_{\mathrm{rob}}(x,y)
+\leq
+\tau
+```
+
+implies:
+
+```math
+S_{\mathrm{rob}}(\widetilde x,y)
+\leq
+\tau+M_\epsilon.
+```
+
+Define:
+
+```math
+\tau_{\mathrm{adj}}
+=
+\tau+M_\epsilon.
+```
+
+The desired Section 2.2 bridge is:
+
+```text
+clean conformal membership
++
+certified score-inflation bound
+        v
+adversarial membership
+```
+
+This is where the next formal reading unit should begin. Even though the prerequisite section already previewed randomized smoothing intuition, the formal Eq. (6)-(11) derivation and the exact paper-level expression for `M_\epsilon` remain deferred to Section 2.2.
 
 ---
 
@@ -1537,8 +2498,8 @@ This is a conceptual precursor for PTT, but the PTT formulas and theory are not 
 
 **Current reading roadmap and status.** This is not a completed-paper record.
 
-1. Stage 1 - Vanilla split conformal prediction: foundation completed in this update.
-2. Stage 2 - Randomized smoothed conformal prediction: prerequisite intuition only; full Section 2.2 deferred.
+1. Stage 1 - Vanilla split conformal prediction: first-pass research understanding substantially complete.
+2. Stage 2 - Randomized smoothed conformal prediction: ready / beginning; prerequisite intuition only; full Section 2.2 deferred.
 3. Stage 3 - RSCP theory-implementation gap: conceptual motivation recorded; formal details deferred.
 4. Stage 4 - RSCP+ and Theorem 1: not completed.
 5. Stage 5 - Corollary 2: not completed; Appendix A.2 proposition recorded only as a future dependency.
@@ -1575,13 +2536,47 @@ robust threshold inflation can hurt set efficiency
 PTT / RCT are later efficiency mechanisms
 ```
 
-Only the first two lines and prerequisite estimator/randomness distinctions are fully developed here.
+The clean split conformal part is now developed through target coverage semantics, finite-sample rank derivation, empirical quantile construction, marginal coverage meaning, efficiency interpretation, and the adversarial failure transition. Section 2.2 is ready to begin but has not been completed.
 
 ---
 
 ## 7. Key Equations and Derivations
 
 This section records derivations that are now structurally important. It intentionally does not complete Theorem 1 or the later robust coverage proof.
+
+### Vanilla CP Coverage Proof Chain
+
+The Section 2.1 proof skeleton is:
+
+```text
+exchangeability
+        v
+rank symmetry
+        v
+finite-sample corrected k
+        v
+calibration threshold tau
+        v
+population true-label score event controlled at level 1-alpha
+        v
+membership-event equivalence
+        v
+marginal membership coverage at level 1-alpha
+```
+
+In formal notation, the central event equivalence is:
+
+```math
+\{
+Y_{n+1}\in C(X_{n+1};\tau)
+\}
+=
+\{
+S(X_{n+1},Y_{n+1})\leq\tau
+\}.
+```
+
+The rank argument controls the right-hand event. The conformal prediction guarantee is then transferred to the left-hand membership event by definition of the prediction set.
 
 ### Why the Intuitive Rank Proof and the Appendix A.2 Proof Both Stay
 
@@ -1849,6 +2844,30 @@ This proposition is a future dependency for Corollary 2. In this update it is re
 
 Each assumption must be tied to a theorem, algorithm step, experiment, or implementation requirement. Current confirmed assumptions are limited to the foundational layers above.
 
+### Vanilla CP Validity Ledger
+
+Vanilla split conformal validity currently relies on:
+
+* calibration/test exchangeability of the true-label scores;
+* the same score construction for calibration and future test examples;
+* the predictive model being fixed before calibration in split conformal prediction;
+* if the score contains auxiliary randomness, the randomization mechanism being applied symmetrically and independently as required.
+
+It does not require:
+
+```math
+\widehat\pi_y(x)
+=
+\mathbb P(Y=y\mid X=x).
+```
+
+It does not imply:
+
+* exact conditional coverage;
+* small prediction sets;
+* model correctness;
+* robustness to shifted or adversarially modified test inputs.
+
 ### Data Assumptions
 
 * Clean split conformal validity uses exchangeability of calibration and test true-label scores.
@@ -1923,6 +2942,18 @@ This section is not a final critique. It records limitation categories that alre
 * Randomized smoothing population guarantees are not the same as finite Monte Carlo implementation guarantees.
 * Naive pointwise Monte Carlo confidence control over every calibration score can become severely conservative.
 * Prediction-set validity and prediction-set usefulness are separate.
+
+### Marginal-Not-Conditional Limitation
+
+Global marginal coverage can conceal poor reliability in specific regions. The hard-region example in Section 2.1 shows that a high distribution-weighted average can coexist with weak subgroup coverage.
+
+### Efficiency Limitation
+
+Validity can remain correct while prediction sets become uninformative. The extreme set `C(x)=[K]` has coverage one but almost no decision value. A weak model or poor score geometry tends to expose itself through larger calibrated thresholds and larger sets.
+
+### Exchangeability Limitation
+
+Ordinary split conformal coverage does not automatically survive distribution shift or adversarially modified test inputs. The clean proof requires calibration and test true-label scores to have the needed exchangeable rank structure.
 
 ### Limitation Categories for Later Reading
 
@@ -2045,6 +3076,45 @@ Research interpretation for this reading, not a paper quotation:
 
 This principle may be important for reliable forecasting systems because deployed systems use finite samples, finite computation, noisy sensors, and changing environments.
 
+### Dynamic-System Research Order
+
+In temporal systems, even without adversarial perturbation:
+
+```math
+(X_t,Y_t)
+```
+
+and:
+
+```math
+(X_{t+1},Y_{t+1})
+```
+
+often exhibit temporal dependence or nonstationarity. Thus ordinary exchangeable split conformal prediction may already be the first point of failure.
+
+The research order for dynamic systems should not be:
+
+```text
+vanilla CP works
+        v
+directly add RSCP
+```
+
+The prior question is:
+
+```text
+what replaces exchangeability?
+```
+
+Possible future literature directions include:
+
+* weighted conformal;
+* online conformal;
+* adaptive conformal;
+* conformal methods for dependent time series.
+
+These are future directions, not results of this paper.
+
 ### Non-Transferable Assumptions
 
 The following assumptions cannot be imported directly into the dynamic-system project without new analysis:
@@ -2076,8 +3146,11 @@ Current status: foundational intuitions supported; later method-specific intuiti
 | --- | --- | --- |
 | Finite-sample calibration should be tied to the actual deployed random object | Prevents theory from proving a guarantee for a quantity different from the implementation | Foundation established; verify full RSCP+ proof next |
 | Randomness accounting is part of reliability | Data randomness, APS randomization, Gaussian smoothing, Monte Carlo sampling, and adversarial perturbation play different roles | Foundation established |
+| Target coverage is a requirement, not a model belief | Prevents confusing `1-\alpha` with classifier accuracy or per-instance confidence | Foundation established |
+| Validity and intelligence are different | A full label set can be valid but useless | Foundation established |
 | Certificates can trade informativeness for safety | Robust threshold inflation can enlarge sets | Verify set-size mechanism and experiments |
 | Score geometry matters | True-label and wrong-label score separation affects set size under the same coverage target | Foundation established; PTT details deferred |
+| Clean-to-attacked transfer is a separate proof obligation | Adversarial test scores generally do not inherit clean exchangeable rank symmetry | Foundation established; Section 2.2 begins next |
 | Training surrogates are not automatically final guarantees | Differentiable objectives may optimize a proxy rather than the exact conformal set | Read RCT and final guarantee relationship |
 
 These intuitions should guide later reading without being upgraded into final paper claims prematurely.
@@ -2150,14 +3223,26 @@ I should now be able to explain:
 10. why original RSCP has an implementation-theory gap;
 11. why naive per-calibration-point Monte Carlo confidence control is difficult;
 12. what training, calibration, and test splits do in split conformal prediction;
-13. what a non-conformity score means;
-14. how HPS and APS differ;
-15. why coverage is equivalent to a true-label score threshold event;
-16. how exchangeability creates rank symmetry;
-17. why the finite-sample correction involves `n+1`;
-18. how Appendix A.2 establishes randomized-score coverage through the indicator proof;
-19. why conformal validity does not require correct classifier specification;
-20. why validity, robustness, prediction-set efficiency, and computational efficiency must stay separate.
+13. why `1-\alpha` is a target marginal coverage requirement, not model accuracy or per-instance confidence;
+14. how `1-\alpha` determines `k`, then `\tau`, then `C(x;\tau)`;
+15. what a non-conformity score means;
+16. how HPS and APS differ;
+17. why HPS membership is equivalent to `\widehat\pi_y(x)\geq 1-\tau`;
+18. why calibration uses true-label scores;
+19. why coverage is equivalent to a true-label score threshold event;
+20. how exchangeability creates rank symmetry;
+21. why the finite-sample correction involves `n+1`;
+22. how the empirical quantile convention matches the corrected rank;
+23. what finite-sample edge case forces `\widehat\tau_\alpha=+\infty`;
+24. how Appendix A.2 establishes randomized-score coverage through the indicator proof;
+25. why conformal validity does not require correct classifier specification;
+26. why bad model quality hurts efficiency rather than necessarily breaking marginal validity;
+27. why marginal coverage differs from conditional coverage;
+28. why marginal coverage differs from empirical test coverage;
+29. why LLN and conformal rank coverage have different proof roles;
+30. why adversarial attack breaks ordinary score-rank symmetry;
+31. why RSCP needs a separate clean-to-attacked score transfer bridge;
+32. why validity, robustness, prediction-set efficiency, and computational efficiency must stay separate.
 
 ### Still Deferred
 
@@ -2178,7 +3263,11 @@ I should not yet claim I can fully explain:
 
 | Action | Target File or Project Component | Status |
 | --- | --- | --- |
-| Begin next close reading: Section 2.2 Randomized Smoothed Conformal Prediction | papers/P-ROB-001/note.md | Next |
+| Completed first-pass research understanding: Part 0 whole-paper map | papers/P-ROB-001/note.md | Done |
+| Completed first-pass research understanding: Part 1 vanilla split conformal prediction | papers/P-ROB-001/note.md | Done |
+| Completed foundational randomness / Monte Carlo prerequisites | papers/P-ROB-001/note.md | Done |
+| Current transition: Section 2.1 to Section 2.2 | papers/P-ROB-001/note.md | Ready |
+| Begin next formal reading unit: Section 2.2 Eq. (6)-(11), score inflation to robust set construction to randomized smoothing certificate | papers/P-ROB-001/note.md | Next |
 | Reconstruct RSCP population score, perturbation relation, and prediction set only after Section 2.2 is read | Sections 5-8 and 16-18 as needed | Planned |
 | Keep Section 3, Theorem 1, Corollary 2, PTT, RCT, experiments, and critique deferred until their own scoped reading updates | This note | Planned |
 | Verify primary-source metadata before adding DOI, OpenReview, arXiv, or code links | Section 1 | Planned |
@@ -2212,8 +3301,10 @@ Do not independently finish the whole paper.
 * [x] Introduction mapped
 * [x] Prerequisite uncertainty/randomness distinctions established
 * [x] Vanilla split conformal foundations developed
+* [x] Section 2.1 first-pass research understanding substantially complete
 * [x] Appendix A.2 randomized-score coverage proof skeleton preserved/organized
 * [x] Project-connection boundary clarified
+* [x] Section 2.2 ready / beginning state established
 * [ ] Section 2.2 Randomized Smoothed Conformal Prediction completed
 * [ ] Section 3 / Theorem 1 completed
 * [ ] Corollary 2 completed
@@ -2222,10 +3313,18 @@ Do not independently finish the whole paper.
 
 Mark this paper as `Completed` only after the following criteria are genuinely satisfied.
 
-* [ ] Vanilla split conformal coverage mechanism understood
-* [ ] Exchangeability and finite-sample rank argument understood
-* [ ] Empirical quantile correction derived
-* [ ] HPS / APS role understood
+* [x] Vanilla split conformal coverage mechanism understood
+* [x] Vanilla split conformal pipeline understood
+* [x] Target coverage semantics understood
+* [x] Exchangeability and finite-sample rank argument understood
+* [x] Finite-sample corrected rank derived
+* [x] Empirical quantile correction derived
+* [x] Empirical quantile relation understood
+* [x] Coverage event equivalence understood
+* [x] HPS / APS role understood
+* [x] Marginal vs conditional coverage understood
+* [x] Classifier quality vs conformal validity understood
+* [x] Score choice / efficiency distinction understood
 * [ ] RSCP motivation understood
 * [ ] Randomized smoothing construction understood
 * [ ] Gaussian smoothing robustness relation understood
