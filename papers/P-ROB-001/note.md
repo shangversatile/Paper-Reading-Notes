@@ -2302,7 +2302,7 @@ which is equivalent to a statement about:
 S(X_{n+1},Y_{n+1}).
 ```
 
-Therefore calibration must estimate the distribution of the same random variable: the score of the true label under a fresh example.
+Therefore calibration must target the same random variable: the score of the true label under a fresh example. This wording matters: conformal validity is not primarily obtained by accurately estimating the whole population CDF of that score. The finite-sample theorem uses exchangeability and ranks.
 
 This is why the calibration stage does not pool:
 
@@ -2776,6 +2776,310 @@ k
 ```
 
 The threshold is the 9th calibration order statistic. The test score only needs to avoid falling beyond the conformal rank cutoff in the pooled 10-score system to obtain at least 90 percent rank coverage.
+
+#### Synthesis - What the Random Threshold Actually Guarantees
+
+**Derived clarification.** This subsection collects the preceding objects into one interpretation: calibration scores, prediction sets, exchangeability, rank, the random threshold, and the meaning of coverage. The purpose is to prevent the conformal guarantee from being misread as either a population-quantile estimation claim or a posterior confidence statement.
+
+For a fixed input `x`, the prediction set:
+
+```math
+C(x;\tau)
+=
+\{
+y\in[K]
+:
+S(x,y)\leq\tau
+\}
+```
+
+contains all candidate labels whose score passes the threshold. The variable `y` in this set-builder notation is not restricted to the true label. At prediction time, the true label is unknown, so the procedure evaluates:
+
+```math
+S(x,1),S(x,2),\ldots,S(x,K)
+```
+
+and returns every candidate label that satisfies:
+
+```math
+S(x,y)\leq\tau.
+```
+
+The calibration threshold, however, is computed from true-label calibration scores:
+
+```math
+S(X_1,Y_1),\ldots,S(X_n,Y_n),
+```
+
+where each `Y_i` is the observed true label for `X_i`. It is not computed by pooling:
+
+```math
+S(X_i,1),\ldots,S(X_i,K)
+```
+
+over all labels for each calibration input.
+
+This is not a mismatch. The coverage target is also a true-label event. For the future point:
+
+```math
+(X_{n+1},Y_{n+1})\sim P_{XY},
+```
+
+the symbol `Y_{n+1}` denotes the future point's true label. The proof controls:
+
+```math
+S(X_{n+1},Y_{n+1})\leq\tau(D_{\mathrm{cal}}),
+```
+
+not:
+
+```math
+S(X_{n+1},y)\leq\tau(D_{\mathrm{cal}})
+\quad
+\text{for every }y\in[K].
+```
+
+Because the prediction set is defined by thresholding every candidate label, the true-label membership event is exactly:
+
+```math
+Y_{n+1}\in C(X_{n+1};\tau)
+\quad
+\Longleftrightarrow
+\quad
+S(X_{n+1},Y_{n+1})\leq\tau.
+```
+
+Thus true-label score calibration is sufficient for the standard split-conformal coverage guarantee. In plain language, the guarantee is about repeating the whole calibration-and-test experiment many times: draw a fresh calibration set, compute its threshold, draw one fresh test point, and check whether the hidden true label of that test point is included. Across those repetitions, the inclusion frequency is at least `1-\alpha`.
+
+The threshold is applied to all candidate labels only because the algorithm does not know which candidate label is the true one. If the hidden true label has a low enough score, it enters the set. If wrong labels also have low enough scores, they also enter the set; that affects prediction-set efficiency, not the validity proof.
+
+Equivalently:
+
+```text
+calibration target:
+true-label score distribution S(X,Y) for (X,Y) ~ P_XY
+
+prediction-set construction:
+apply the resulting threshold to every candidate y for the observed x
+
+coverage event:
+the hidden true label Y is one of the labels that passed the threshold
+
+efficiency issue:
+wrong labels may also pass the threshold
+```
+
+The population CDF:
+
+```math
+F_Z(t)
+=
+\mathbb P_{(X,Y)\sim P_{XY}}
+\left(
+S(X,Y)\leq t
+\right)
+```
+
+is the distribution of the random true-label score:
+
+```math
+Z=S(X,Y),
+\qquad
+(X,Y)\sim P_{XY}.
+```
+
+It is not the distribution obtained by fixing one realized `x` and varying candidate labels `y=1,\ldots,K`. For a fixed `x` and a fixed trained scoring rule, the list:
+
+```math
+S(x,1),\ldots,S(x,K)
+```
+
+is a candidate-label score vector used to construct a set. The conformal theorem's rank argument is about the random true-label score across random examples.
+
+The complete finite-sample probability statement keeps the randomness of the calibration set and the future test point:
+
+```math
+\mathbb P_{D_{\mathrm{cal}},(X_{n+1},Y_{n+1})}
+\left[
+S(X_{n+1},Y_{n+1})
+\leq
+\tau(D_{\mathrm{cal}})
+\right]
+\geq
+1-\alpha.
+```
+
+So is this guarantee about `P_{XY}`? Yes, but only in this precise sense. The data-generating law is still the source of the probability statement. The future test pair:
+
+```math
+(X_{n+1},Y_{n+1})
+\sim
+P_{XY}
+```
+
+is drawn from the same data-generating distribution as the calibration examples:
+
+```math
+(X_i,Y_i)
+\overset{\mathrm{i.i.d.}}{\sim}
+P_{XY}.
+```
+
+Therefore the covered object is a future true-label score under `P_{XY}`. The subtle point is that the threshold used to cover that future score is itself random, because it is computed from the random calibration set.
+
+For a realized calibration set `D_{\mathrm{cal}}=d`, the threshold becomes a fixed number `\tau(d)`. One can then ask a genuine population question under `P_{XY}`:
+
+```math
+\mathbb P_{(X,Y)\sim P_{XY}}
+\left(
+S(X,Y)
+\leq
+\tau(d)
+\right).
+```
+
+This number is the future true-label coverage produced by that particular realized calibration set. It may be below `1-\alpha`; it may be above `1-\alpha`. Standard split conformal does not promise that every possible realized calibration set produces a good population threshold.
+
+The theorem instead says that when `D_{\mathrm{cal}}` is also treated as random, the average of those realized-calibration-set coverages is at least the target:
+
+```math
+\mathbb E_{D_{\mathrm{cal}}}
+\left[
+\mathbb P_{(X,Y)\sim P_{XY}}
+\left(
+S(X,Y)
+\leq
+\tau(D_{\mathrm{cal}})
+\mid
+D_{\mathrm{cal}}
+\right)
+\right]
+\geq
+1-\alpha.
+```
+
+So the guarantee is genuinely about future examples drawn from `P_{XY}`, but it is not a per-realized-threshold guarantee. It is a guarantee for the whole sampling procedure:
+
+```text
+draw calibration set from P_XY
+        v
+compute random tau(D_cal)
+        v
+draw future test pair from P_XY
+        v
+check whether the future true-label score passes tau(D_cal)
+```
+
+This is why both statements must be held together:
+
+```text
+yes:
+the future test point is governed by P_XY
+
+no:
+the theorem does not require every realized tau(D_cal) to satisfy F_Z(tau(D_cal)) >= 1-alpha
+```
+
+Read this as the following repeated experiment:
+
+```text
+1. Draw n calibration pairs from P_XY.
+2. Compute tau from their true-label scores.
+3. Draw one more pair (X_{n+1},Y_{n+1}) from P_XY.
+4. Compute the true test score S(X_{n+1},Y_{n+1}) in the proof.
+5. Ask whether this true test score is <= tau.
+6. Over repeated draws of steps 1-3, this succeeds at least 1-alpha of the time.
+```
+
+This is a weaker and more precise demand than "the realized `\tau` works for every possible future condition." The theorem does not need one fixed threshold that is good for every fixed `x`, every fixed realized calibration set, or every candidate label. It only needs the next randomly drawn true-label score to be covered with the required frequency when the calibration set and the next test point are both generated by the assumed exchangeable sampling process.
+
+This also does not say that a realized threshold `\tau(D_{\mathrm{cal}})` must equal the population `(1-\alpha)` quantile. In particular, the theorem does not require:
+
+```math
+F_Z
+\left(
+\tau(D_{\mathrm{cal}})
+\right)
+\geq
+1-\alpha.
+```
+
+The threshold is a random variable. Some calibration sets may produce a threshold whose future true-label coverage is below the target; other calibration sets may produce a threshold whose future true-label coverage is above the target. The conformal theorem controls the frequency after the whole random experiment is repeated, not the success level of every single realized calibration set.
+
+When the term **marginal coverage** is used in this note, it means exactly this whole-experiment frequency:
+
+```text
+random calibration set
+plus
+random future test point
+plus
+threshold computed from that calibration set
+        v
+true label of the future point is included at least 1-alpha of the time
+```
+
+It does not mean:
+
+```text
+after one particular calibration set has already been realized,
+the resulting fixed tau must have at least 1-alpha future coverage by itself
+```
+
+and it does not mean:
+
+```text
+for one particular fixed x,
+the set C(x) carries posterior confidence 1-alpha for the true label
+```
+
+The proof imagines the `n` calibration true-label scores and the future true-label score together:
+
+```math
+S_1,\ldots,S_n,S_{n+1},
+```
+
+where:
+
+```math
+S_i=S(X_i,Y_i),
+\qquad
+S_{n+1}=S(X_{n+1},Y_{n+1}).
+```
+
+This does not mean the algorithm uses `S_{n+1}` to compute `\tau`. It cannot: at prediction time `Y_{n+1}` is unknown, so the true test score `S(X_{n+1},Y_{n+1})` is unknown. The pooled `n+1` scores are a proof device.
+
+The intuitive reason this is allowed is not that the algorithm secretly knows the test score. It is that the label "test point" is not distributionally special. Before seeing the data, any one of the `n+1` exchangeable true-label scores could have been the held-out future score, and any other `n` could have formed the calibration set. Therefore the future score's rank among the pooled `n+1` scores is not biased toward being unusually large or unusually small. The proof uses that rank symmetry; the implementation still computes `\tau` only from the actual calibration scores.
+
+So the precise interpretation is:
+
+```text
+what the algorithm does:
+compute tau from n calibration examples whose true labels are known
+
+what the proof imagines:
+put those n true-label scores together with the next point's true-label score
+
+why the rank argument works:
+among these n+1 exchangeable true-label scores, the future test score has no special rank
+
+what is guaranteed:
+in the repeated experiment, the next true-label score is <= tau at least 1-alpha of the time
+
+why this gives set coverage:
+Y_{n+1} is in C(X_{n+1}) exactly when S(X_{n+1},Y_{n+1}) <= tau
+
+what is not guaranteed:
+the set C(x) is not a posterior-confidence statement for one already fixed x
+```
+
+It is therefore incorrect to read conformal coverage as "for this fixed x, the probability that the realized true label lies in this set is `1-\alpha`" in a posterior-confidence sense. The standard split-conformal guarantee is only the repeated-sampling statement:
+
+```text
+randomly draw a calibration set,
+randomly draw a future test pair (X,Y),
+build C(X) using the random threshold from the calibration set,
+then Y is included with probability at least 1-alpha.
+```
 
 #### Marginal vs Conditional Coverage
 
