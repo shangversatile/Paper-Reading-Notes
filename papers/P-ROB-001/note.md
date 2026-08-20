@@ -10,9 +10,9 @@
 **Paper ID:** P-ROB-001
 **Reading Status:** Reading
 
-**Current close-reading scope:** whole-paper framework, Introduction-level motivation, prerequisite probability/randomness clarifications, Section 2.1 vanilla split conformal prediction first-pass foundations, Appendix A.2 randomized-score rank-coverage proof skeleton, and formal transition readiness for Section 2.2.
+**Current close-reading scope:** whole-paper framework, Introduction-level motivation, prerequisite probability/randomness clarifications, Section 2.1 vanilla split conformal prediction first-pass foundations, Section 2.2 original RSCP first-pass foundations, Section 3 original-RSCP implementation criticism, RSCP+ conceptual redesign, Appendix A.2 randomized-score rank-coverage proof skeleton, and Theorem 1 statement/dependency preparation.
 
-**Explicitly deferred:** Section 2.2 full RSCP derivation, Section 3, Theorem 1, Corollary 2, Empirical Bernstein refinement, PTT, RCT, experiments, final critique, and final research questions.
+**Explicitly deferred:** full Theorem 1 proof, Corollary 2, Empirical Bernstein refinement, PTT, RCT, experiments, final critique, and final research questions.
 
 This note remains a research-reading workspace. Do not add DOI, OpenReview ID, arXiv ID, page numbers, official code URL, experiment results, or ablation claims until they are independently verified from the paper or another primary source.
 
@@ -23,7 +23,7 @@ This note remains a research-reading workspace. Do not add DOI, OpenReview ID, a
 **Reading Tier:** Tier 1
 **Primary Track:** Robustness and Robust Reliability
 **Related Project:** Reliable Spatiotemporal Forecasting under Dynamic Distribution Shift
-**Current Reading Scope:** foundational framework and Section 2.1 first-pass foundations substantially complete; Section 2.2 ready / beginning; paper still Reading
+**Current Reading Scope:** foundational framework, Section 2.1 first-pass foundations, Section 2.2 original RSCP, Section 3 motivation, RSCP+ conceptual redesign, and Theorem 1 dependency preparation complete at first pass; paper still Reading
 
 **Secondary Topics:**
 
@@ -63,6 +63,7 @@ Current labels used below:
 * **Paper statement:** definitions, claims, or proof skeletons attributed to the paper.
 * **Derived explanation:** reconstruction from the paper's definitions and conformal prediction logic.
 * **Pedagogical toy example:** a simplified example used for intuition, not a paper theorem or experiment.
+* **Pedagogical no-tie rank explanation:** a distribution-free rank intuition that explains why conformal coverage can work without estimating the population CDF; the formal finite-sample proof remains Appendix A.2.
 * **Research interpretation:** my abstraction, critique, or transfer framing.
 * **Project connection:** relevance to dynamic-system reliability research.
 * **Not yet verified:** deferred material that must not be treated as completed.
@@ -73,36 +74,32 @@ Current labels used below:
 
 **Derived explanation.** The paper starts from ordinary conformal prediction and asks how to preserve a meaningful coverage guarantee when the test input may be adversarially perturbed, while still keeping the prediction set informative.
 
-The whole-paper problem decomposition is:
+The whole-paper problem decomposition should be read with explicit paper-role labels:
 
 ```text
-Vanilla conformal prediction
+[背景] Standard Conformal Prediction
         v
-finite-sample marginal coverage under exchangeability
+finite-sample marginal coverage from exchangeability / rank symmetry
         v
-adversarially perturbed test input
+[问题] Adversarial perturbation breaks the ordinary
+clean calibration/test exchangeability argument
         v
-ordinary clean conformal rank argument no longer directly applies
+[已有方案] RSCP
+Randomized smoothing + threshold inflation
         v
-RSCP introduces randomized smoothing
+[本文否定 / Challenge 1]
+Original RSCP's practical robustness certificate
+does not properly account for finite Monte Carlo estimation
         v
-population smoothed score admits perturbation bound
+[本文方案 1] RSCP+
+Treat the Monte Carlo estimator itself as the conformal score
+and derive a new robustness bridge
         v
-practical randomized smoothing uses finite Monte Carlo estimation
+[剩余问题 / Challenge 2]
+Certified robust sets become overly conservative / trivial
         v
-original RSCP does not explicitly control this implementation error
-        v
-RSCP+
-        v
-formal certificate for implemented Monte Carlo score
-        v
-but robust correction is highly conservative
-        v
-large / trivial prediction sets
-        v
-PTT and RCT reshape score/model geometry
-        v
-validity + robustness + informativeness
+[本文方案 2]
+PTT + RCT improve prediction-set efficiency
 ```
 
 The first conceptual obstacle is that ordinary split conformal prediction obtains coverage from exchangeability of calibration and test **true-label scores**. If an adversary changes only the test input, the clean calibration scores and the attacked test score generally no longer have the same distribution. The ordinary clean-data rank argument therefore cannot be silently reused.
@@ -128,6 +125,8 @@ S(x+Z_j,y).
 For finite `N_MC`, these are different mathematical objects. The paper's Section 3 motivation, as currently understood, is that the original RSCP robustness certificate lives at the population-smoothed-score level but the implemented method uses the Monte Carlo score. RSCP+ is introduced to close this theory-implementation gap.
 
 The third obstacle is efficiency. Robust certification can require threshold inflation. Inflated thresholds can make prediction sets large or even trivial. PTT and RCT are later-paper mechanisms intended to improve prediction-set efficiency, but this note has not yet completed those sections.
+
+This navigation system is part of the note's reading discipline. Each core subsection should be located on this chain: standard CP is background, original RSCP is an existing method, Section 3 first gives the paper's negative theory-implementation diagnosis, RSCP+ is the paper's first corrective move, and PTT/RCT are deferred efficiency mechanisms.
 
 The Section 2.1 foundation now has a precise causal chain:
 
@@ -193,39 +192,41 @@ RSCP does not make the attacked score magically exchangeable with clean calibrat
 
 ### Whole-Paper Dependency Graph
 
-Research map - later stages are not yet completed.
+Research map - Theorem 1 is prepared but not proved in this update.
 
 ```text
-Split Conformal Prediction
+[背景] Split Conformal Prediction
         v
-exchangeability / rank / empirical quantile
+exchangeability / rank / random empirical threshold
         v
 marginal coverage
         v
-Randomized Smoothed CP
+[问题] attacked test score no longer shares clean score exchangeability
+        v
+[已有方案] Original RSCP
         v
 Gaussian smoothing perturbation relation
         v
 finite Monte Carlo implementation
         v
-RSCP implementation-certificate gap
+[本文否定 / Challenge 1] original RSCP implementation-certificate gap
         v
-RSCP+
+[本文方案 1] RSCP+
         v
-Hoeffding + smoothing relation + union bound
+Hoeffding + Gaussian bridge + Hoeffding
         v
-Theorem 1
+Theorem 1 dependency preparation
         v
 Corollary 2
         v
 robust conformal coverage
         v
-conservativeness
+[剩余问题 / Challenge 2] conservativeness
         v
-PTT / RCT
+[本文方案 2] PTT / RCT
 ```
 
-This graph is a dependency map, not a completion record. The only completed close-reading layers here are the framework, prerequisite randomness distinctions, vanilla split conformal foundations, and Appendix A.2 randomized-score coverage proof skeleton.
+This graph is a dependency map, not a completion record. The completed first-pass layers here are the framework, prerequisite randomness distinctions, vanilla split conformal foundations, original RSCP foundations, Section 3 motivation, RSCP+ conceptual redesign, and Appendix A.2 randomized-score coverage proof skeleton. Theorem 1 is only prepared as a dependency graph.
 
 ### Mechanism Chain for Randomized Smoothing
 
@@ -258,10 +259,11 @@ The note must keep the following random or uncertain objects separate:
 | Object | Source | Role in This Reading |
 | --- | --- | --- |
 | Data randomness | `(X_i,Y_i)` drawn from the data-generating process | Drives exchangeability and conformal rank coverage |
+| Calibration-set randomness | random draw of `D_{\mathrm{cal}}` | Makes the calibrated threshold `\tau(D_{\mathrm{cal}})` a random variable |
 | Score randomization | APS uses `U\sim\mathrm{Uniform}[0,1]` | Randomized scores can still be conformally valid if generated symmetrically |
 | Gaussian smoothing randomness | `Z\sim\mathcal N(0,\sigma^2 I_p)` | Defines the population smoothed score |
 | Monte Carlo sampling randomness | finite samples `Z_1,\ldots,Z_{N_{\mathrm{MC}}}` | Makes the implemented smoothed score random around its expectation |
-| Adversarial perturbation | bounded vector `\Delta` | Changes the deployed test input and is not necessarily random |
+| Adversarial perturbation | bounded vector `\Delta` | Changes the deployed test input and is usually treated as a worst-case allowed vector, not as sampling randomness |
 
 Do not call all of these "noise." They live in different probability or uncertainty layers and support different proof mechanisms.
 
@@ -272,7 +274,7 @@ These four evaluation axes must not be mixed. This table is the reading checklis
 | Axis | Meaning | Reading Check |
 | --- | --- | --- |
 | Validity | Whether the stated coverage guarantee holds | Section 2.1 marginal coverage now established |
-| Robustness | Whether the guarantee transfers under the specified perturbation model | Perturbation bookkeeping established; full RSCP/RSCP+ proof deferred |
+| Robustness | Whether the guarantee transfers under the specified perturbation model | Original RSCP transfer first-pass complete; RSCP+ Theorem 1/Corollary 2 proof deferred |
 | Prediction-set efficiency | Whether the set is small and informative enough to use | Conservativeness motivation established; PTT/RCT deferred |
 | Computational efficiency | Runtime, smoothing samples, training cost, and implementation overhead | Monte Carlo cost identified; experiments deferred |
 
@@ -282,10 +284,12 @@ Experiments and theory should be read against these axes separately.
 
 ## 5. Mathematical or Algorithmic Setup
 
-This section contains two layers:
+This section contains four layers:
 
 1. prerequisite clarifications needed before reading the formal RSCP/RSCP+ derivations;
-2. the paper's Section 2.1 vanilla split conformal prediction foundations.
+2. the paper's Section 2.1 vanilla split conformal prediction foundations;
+3. the paper's Section 2.2 original RSCP first-pass derivation;
+4. the Section 3 transition from original RSCP's implementation gap to RSCP+ and Theorem 1 dependencies.
 
 Later sections must not assume these objects are interchangeable.
 
@@ -300,6 +304,10 @@ vanilla split conformal objects
         v
 target coverage semantics
         v
+empirical threshold vs population quantile
+        v
+random-threshold probability semantics
+        v
 rank-to-threshold derivation
         v
 coverage event equivalence
@@ -310,10 +318,16 @@ efficiency and model-quality interpretation
         v
 adversarial failure of clean rank symmetry
         v
-ready state for Section 2.2 RSCP
+original RSCP robust transfer
+        v
+Section 3 implementation gap
+        v
+RSCP+ score-object redesign
+        v
+Theorem 1 dependency preparation
 ```
 
-This is not a second template. It is a map for the expanded Section 2.1 proof logic.
+This is not a second template. It is a map for the expanded Section 2.1, Section 2.2, and Section 3 transition logic.
 
 ### Foundational Clarifications Before the Formal Derivations
 
@@ -597,7 +611,532 @@ linear transformed score
 
 directly exposes the source of the Lipschitz certificate.
 
-#### Clarification 4 - General Randomized Smoothing Relation
+#### Clarification 4 - Gaussian Geometry Along the Perturbation Direction
+
+**Derived explanation.** The phrase "look along the perturbation direction" has a precise linear-algebra meaning. Assume:
+
+```math
+\Delta\neq 0.
+```
+
+Define the unit vector:
+
+```math
+u
+=
+\frac{\Delta}{\|\Delta\|_2}.
+```
+
+Then:
+
+```math
+\|u\|_2=1,
+\qquad
+\Delta
+=
+\|\Delta\|_2u.
+```
+
+Looking along the perturbation direction means decomposing any vector into its projection onto the one-dimensional span of `u` and its component in the orthogonal subspace.
+
+Let:
+
+```math
+Z
+\sim
+\mathcal N(0,\sigma^2I_p).
+```
+
+Define the scalar parallel coordinate:
+
+```math
+Z_{\parallel}
+=
+u^\top Z.
+```
+
+Define the orthogonal vector:
+
+```math
+Z_{\perp}
+=
+(I_p-uu^\top)Z.
+```
+
+Then:
+
+```math
+Z
+=
+Z_{\parallel}u
++
+Z_{\perp},
+```
+
+and:
+
+```math
+u^\top Z_{\perp}
+=
+0.
+```
+
+This is only Euclidean orthogonal projection. It is not an additional statistical assumption.
+
+Two-dimensional example:
+
+```math
+\Delta
+=
+\begin{pmatrix}
+3\\
+4
+\end{pmatrix}.
+```
+
+Then:
+
+```math
+\|\Delta\|_2
+=
+5,
+```
+
+and:
+
+```math
+u
+=
+\begin{pmatrix}
+3/5\\
+4/5
+\end{pmatrix}.
+```
+
+For one Gaussian realization `Z`, the scalar:
+
+```math
+u^\top Z
+```
+
+is the signed length of the Gaussian noise in the attack movement direction. The vector:
+
+```math
+Z_{\perp}
+```
+
+records all perpendicular variation.
+
+Because:
+
+```math
+\Delta
+=
+\|\Delta\|_2u,
+```
+
+the attacked Gaussian-centered point satisfies:
+
+```math
+Z+\Delta
+=
+Z_{\parallel}u
++
+Z_{\perp}
++
+\|\Delta\|_2u.
+```
+
+Equivalently:
+
+```math
+Z+\Delta
+=
+\left(
+Z_{\parallel}
++
+\|\Delta\|_2
+\right)u
++
+Z_{\perp}.
+```
+
+Thus:
+
+```text
+parallel coordinate:
+Z_parallel
+        v
+Z_parallel + ||Delta||
+
+orthogonal coordinates:
+unchanged
+```
+
+This is the strict meaning of saying that the attack creates a mean displacement only in the perturbation direction.
+
+The distribution of the parallel coordinate is:
+
+```math
+u^\top Z
+\sim
+\mathcal N
+\left(
+u^\top0,
+u^\top(\sigma^2I_p)u
+\right).
+```
+
+Since:
+
+```math
+u^\top u=1,
+```
+
+we have:
+
+```math
+Z_{\parallel}
+=
+u^\top Z
+\sim
+\mathcal N(0,\sigma^2).
+```
+
+After attack:
+
+```math
+u^\top(Z+\Delta)
+=
+u^\top Z
++
+u^\top\Delta.
+```
+
+But:
+
+```math
+u^\top\Delta
+=
+\|\Delta\|_2.
+```
+
+Therefore:
+
+```math
+u^\top(Z+\Delta)
+\sim
+\mathcal N
+\left(
+\|\Delta\|_2,
+\sigma^2
+\right).
+```
+
+Orthogonal directions do not shift. For any unit vector `v` satisfying:
+
+```math
+v^\top u=0,
+```
+
+we have:
+
+```math
+v^\top\Delta
+=
+0,
+```
+
+and hence:
+
+```math
+v^\top(Z+\Delta)
+=
+v^\top Z.
+```
+
+The covariance:
+
+```math
+\sigma^2I_p
+```
+
+is isotropic. This means every unit direction has the same Gaussian scale:
+
+```math
+\mathrm{Var}
+\left(
+u^\top Z
+\right)
+=
+\sigma^2.
+```
+
+Therefore the coordinate system can be rotated without loss of information so that the attack direction is the first coordinate axis. In that coordinate system, the relevant mean-shift comparison is the one-dimensional pair:
+
+```math
+\mathcal N(0,\sigma^2)
+\quad\text{vs}\quad
+\mathcal N
+\left(
+\|\Delta\|_2,
+\sigma^2
+\right).
+```
+
+Standardization is the source of the ratio `\|\Delta\|_2/\sigma`. Define:
+
+```math
+T
+=
+\frac{u^\top Z}{\sigma}.
+```
+
+Then:
+
+```math
+T
+\sim
+\mathcal N(0,1).
+```
+
+After attack:
+
+```math
+T_{\mathrm{attacked}}
+=
+\frac{
+u^\top(Z+\Delta)
+}{\sigma},
+```
+
+so:
+
+```math
+T_{\mathrm{attacked}}
+\sim
+\mathcal N
+\left(
+\frac{\|\Delta\|_2}{\sigma},
+1
+\right).
+```
+
+The standardized displacement is:
+
+```math
+d
+=
+\frac{\|\Delta\|_2}{\sigma}.
+```
+
+If:
+
+```math
+\|\Delta\|_2
+\leq
+\epsilon,
+```
+
+then:
+
+```math
+d
+\leq
+\frac{\epsilon}{\sigma}.
+```
+
+This dimensionless ratio, not `\sigma\epsilon`, is the core scale in Gaussian randomized-smoothing robustness.
+
+The standard Gaussian CDF appears because the standardized coordinate is standard normal:
+
+```math
+\Phi(a)
+=
+\mathbb P
+\left(
+T\leq a
+\right),
+\qquad
+T\sim\mathcal N(0,1).
+```
+
+If a clean Gaussian event has probability:
+
+```math
+p,
+```
+
+it can be written as:
+
+```math
+p
+=
+\Phi(a),
+\qquad
+a
+=
+\Phi^{-1}(p).
+```
+
+A mean shift of size:
+
+```math
+d
+=
+\frac{\|\Delta\|_2}{\sigma}
+```
+
+naturally transforms the Gaussian probability scale through:
+
+```math
+\Phi
+\left(
+\Phi^{-1}(p)
++
+d
+\right).
+```
+
+Thus:
+
+```math
+\Phi
+\left[
+\Phi^{-1}(p)
++
+\frac{\|\Delta\|_2}{\sigma}
+\right]
+```
+
+is not arbitrary algebra. It comes from Gaussian measure, a mean shift measured in standard deviations, and the probit coordinate system.
+
+The general randomized smoothing theorem used by the paper can be stated as follows. Fix label `y`, let:
+
+```math
+f(x)
+=
+S(x,y),
+\qquad
+0\leq f(x)\leq1,
+```
+
+and define:
+
+```math
+g(x)
+=
+\mathbb E_{Z\sim\mathcal N(0,\sigma^2I_p)}
+\left[
+f(x+Z)
+\right].
+```
+
+Then the smoothing result gives:
+
+```math
+g(x+\Delta)
+\leq
+\Phi
+\left[
+\Phi^{-1}
+\left(
+g(x)
+\right)
++
+\frac{\|\Delta\|_2}{\sigma}
+\right].
+```
+
+The projection analysis above explains why the natural Gaussian shift scale is `\|\Delta\|_2/\sigma`. It does not by itself prove the full inequality for every bounded measurable `f`. That step uses a Gaussian extremal / likelihood-ratio / half-space principle from randomized smoothing theory, which this paper uses as a background theorem rather than reproving from scratch.
+
+The half-space intuition is that, for fixed clean expectation:
+
+```math
+g(x)=p,
+```
+
+the sets whose Gaussian measure changes most under a fixed mean shift are controlled by threshold events along the shift direction. This compresses the high-dimensional worst case into a one-dimensional Gaussian threshold comparison and explains the appearance of both `\Phi` and `\Phi^{-1}`.
+
+The inverse CDF is mathematically essential. Define the transformed RSCP score:
+
+```math
+\widetilde S(x,y)
+=
+\Phi^{-1}
+\left(
+S_{\mathrm{RS}}(x,y)
+\right),
+```
+
+where:
+
+```math
+S_{\mathrm{RS}}(x,y)
+=
+\mathbb E_Z
+\left[
+S(x+Z,y)
+\right].
+```
+
+The general inequality gives:
+
+```math
+S_{\mathrm{RS}}(x+\Delta,y)
+\leq
+\Phi
+\left[
+\Phi^{-1}
+\left(
+S_{\mathrm{RS}}(x,y)
+\right)
++
+\frac{\|\Delta\|_2}{\sigma}
+\right].
+```
+
+Since `\Phi^{-1}` is monotone increasing:
+
+```math
+\widetilde S(x+\Delta,y)
+\leq
+\widetilde S(x,y)
++
+\frac{\|\Delta\|_2}{\sigma}.
+```
+
+Swapping the two points gives the absolute form:
+
+```math
+\left|
+\widetilde S(x+\Delta,y)
+-
+\widetilde S(x,y)
+\right|
+\leq
+\frac{\|\Delta\|_2}{\sigma}.
+```
+
+Therefore `\widetilde S` has `1/\sigma` Lipschitz control in input space. In probability space the Gaussian shift is nonlinear:
+
+```text
+p
+        v
+Phi(Phi^{-1}(p)+d)
+```
+
+In probit space it becomes additive:
+
+```text
+Phi^{-1}(p)
+        v
+Phi^{-1}(p)+d
+```
+
+This is the mathematical role of `\Phi^{-1}`. It is not a decorative transformation.
+
+#### Clarification 5 - General Randomized Smoothing Relation
 
 **Paper statement / derived explanation.** At the paper level, the base score is assumed to be bounded:
 
@@ -697,9 +1236,9 @@ The ideal robust threshold adjustment is:
 \tau+\frac{\epsilon}{\sigma}.
 ```
 
-This is still population-level RSCP logic. It has not yet solved finite Monte Carlo implementation error.
+This is original RSCP's population-level score-inflation logic. It still has not solved finite Monte Carlo implementation error; Section 3 and RSCP+ address that theory-implementation gap.
 
-#### Clarification 5 - Where Monte Carlo Error Comes From
+#### Clarification 6 - Where Monte Carlo Error Comes From
 
 **Derived explanation.** For fixed realized `(x,y)`, define the Monte Carlo random variable:
 
@@ -1023,6 +1562,20 @@ The proof objects must be separated as follows.
 
 comes from the data-generating process and supports the exchangeability/rank argument.
 
+**Calibration-set randomness.**
+
+```math
+D_{\mathrm{cal}}
+```
+
+is random, so the threshold:
+
+```math
+\tau(D_{\mathrm{cal}})
+```
+
+is random. Basic split-conformal coverage averages over this calibration-set randomness and the future test point. It is not generally a per-realization guarantee for every fixed `D_{\mathrm{cal}}`.
+
 **Score randomization.** APS contains:
 
 ```math
@@ -1053,9 +1606,15 @@ are the finite smoothing samples actually used by the implemented estimator.
 \Delta
 ```
 
-comes from a bounded threat set and is not necessarily random.
+comes from a bounded threat set and is not necessarily random. It is typically handled as a worst-case allowed vector satisfying:
 
-Later RSCP+ arguments must also distinguish population smoothing randomness from finite Monte Carlo sampling randomness.
+```math
+\|\Delta\|_2
+\leq
+\epsilon.
+```
+
+Theorem 1 must also distinguish which probability statement is over finite Monte Carlo randomness and where its `1-2\beta` confidence event enters. That bookkeeping is prepared here but not fully proved.
 
 ### Section 2.1 - Vanilla Split Conformal Prediction
 
@@ -1188,6 +1747,294 @@ lower informativeness
 ```
 
 This is the most basic version of the coverage-efficiency tension that later robust methods must confront.
+
+#### Why a Random Empirical Threshold Can Still Give Population Coverage
+
+**Derived clarification.** Standard split conformal can be discussed after conditioning on the already-fixed training stage. Let:
+
+```math
+D_{\mathrm{train}}
+```
+
+be fixed, and therefore treat the fitted model and score rule:
+
+```math
+S
+```
+
+as fixed. The remaining randomness is the calibration/test randomness:
+
+```math
+(X_1,Y_1),\ldots,(X_n,Y_n),(X_{n+1},Y_{n+1}),
+```
+
+which are still drawn from the same exchangeable mechanism after the training stage has been fixed.
+
+Define true-label score random variables:
+
+```math
+Z_i
+=
+S(X_i,Y_i),
+\qquad
+i=1,\ldots,n+1.
+```
+
+As a conceptual contrast, introduce a generic future score:
+
+```math
+Z
+=
+S(X,Y),
+\qquad
+(X,Y)\sim P_{XY}.
+```
+
+Its true but unknown population CDF is:
+
+```math
+F_Z(t)
+=
+\mathbb P
+\left(
+Z\leq t
+\right)
+=
+\mathbb P_{(X,Y)\sim P_{XY}}
+\left(
+S(X,Y)\leq t
+\right).
+```
+
+If this CDF were known, one could define a population quantile:
+
+```math
+q_{1-\alpha}
+=
+F_Z^{-1}(1-\alpha),
+```
+
+and then:
+
+```math
+\mathbb P
+\left(
+Z\leq q_{1-\alpha}
+\right)
+\geq
+1-\alpha.
+```
+
+But split conformal does not know this population quantile, and its finite-sample validity does not require first proving that an empirical quantile has accurately estimated it.
+
+There are two different proof paradigms.
+
+Ordinary quantile-estimation logic is:
+
+```text
+Z_1,...,Z_n
+        v
+empirical CDF F_n
+        v
+show F_n approximates F_Z
+        v
+empirical quantile approximates population quantile
+        v
+asymptotic / estimation argument
+```
+
+This kind of argument may rely on large samples, empirical-process convergence, DKW, Glivenko-Cantelli, or asymptotic normality.
+
+This is not the core source of standard conformal finite-sample validity.
+
+Conformal rank logic is:
+
+```text
+Z_1,...,Z_n,Z_{n+1}
+        v
+exchangeability
+        v
+future test score has no privileged rank
+        v
+finite pooled-rank symmetry
+        v
+choose corrected calibration order statistic
+        v
+finite-sample coverage
+```
+
+This is a symmetry / rank argument, not a distribution-estimation argument.
+
+The calibration set:
+
+```math
+D_{\mathrm{cal}}
+=
+\{
+(X_1,Y_1),\ldots,(X_n,Y_n)
+\}
+```
+
+is random. Therefore:
+
+```math
+Z_1,\ldots,Z_n
+```
+
+are random, and the threshold computed from them:
+
+```math
+\tau
+=
+\tau(D_{\mathrm{cal}})
+```
+
+is itself a random variable.
+
+The basic finite-sample statement is therefore:
+
+```math
+\mathbb P_{D_{\mathrm{cal}},(X_{n+1},Y_{n+1})}
+\left[
+S(X_{n+1},Y_{n+1})
+\leq
+\tau(D_{\mathrm{cal}})
+\right]
+\geq
+1-\alpha.
+```
+
+If training randomness is retained, this statement can be read conditionally on the training stage first, and then averaged over training data if desired. The clean split-conformal rank argument itself is about the calibration/test scores after the score rule has been fixed.
+
+By the tower property:
+
+```math
+\mathbb P
+\left[
+S(X_{n+1},Y_{n+1})
+\leq
+\tau(D_{\mathrm{cal}})
+\right]
+=
+\mathbb E_{D_{\mathrm{cal}}}
+\left[
+\mathbb P_{(X,Y)\sim P_{XY}}
+\left(
+S(X,Y)
+\leq
+\tau(D_{\mathrm{cal}})
+\mid
+D_{\mathrm{cal}}
+\right)
+\right].
+```
+
+The conformal guarantee says this average is at least `1-\alpha`. The meaning is:
+
+> Across possible calibration-set realizations, the future coverage induced by the random threshold averages to at least the target level under the calibration/test sampling law.
+
+It does not mean every realized calibration set has conditional population coverage at least `1-\alpha`. In general, standard split conformal does not guarantee:
+
+```math
+\mathbb P_{(X,Y)\sim P_{XY}}
+\left(
+S(X,Y)
+\leq
+\tau(D_{\mathrm{cal}})
+\mid
+D_{\mathrm{cal}}
+\right)
+\geq
+1-\alpha
+```
+
+for every realized:
+
+```math
+D_{\mathrm{cal}}.
+```
+
+Equivalently, one generally cannot claim:
+
+```math
+F_Z
+\left(
+\tau(D_{\mathrm{cal}})
+\right)
+\geq
+1-\alpha
+```
+
+for every calibration sample. Some realized calibration samples can produce thresholds with lower conditional future coverage; others can produce thresholds with higher conditional future coverage. The finite-sample conformal theorem controls the joint probability after averaging over calibration-set randomness as well as the future test point.
+
+**Pedagogical no-tie rank explanation.** Let:
+
+```math
+n=4,
+\qquad
+1-\alpha=0.8.
+```
+
+Then:
+
+```math
+k
+=
+\left\lceil
+(4+1)\times0.8
+\right\rceil
+=
+4.
+```
+
+The conformal threshold is:
+
+```math
+\tau
+=
+\max
+\{
+Z_1,Z_2,Z_3,Z_4
+\}.
+```
+
+Do not assume `Z` is normal, beta, or from any known parametric family. Suppose only that:
+
+```math
+Z_1,\ldots,Z_5
+```
+
+are exchangeable, and consider the no-tie pedagogical case. Then:
+
+```math
+\mathbb P
+\left(
+Z_5
+\text{ is the largest of }
+Z_1,\ldots,Z_5
+\right)
+=
+\frac15.
+```
+
+Therefore:
+
+```math
+\mathbb P
+\left(
+Z_5
+\leq
+\max\{Z_1,\ldots,Z_4\}
+\right)
+=
+\frac45
+=
+0.8.
+```
+
+No empirical-CDF approximation appeared anywhere. No population density was estimated. No asymptotic limit was used.
+
+This intuitive example answers why conformal coverage can possibly work without estimating `F_Z`. It does not replace the formal proof. Appendix A.2 remains the rigorous finite-sample proof, including the quantile convention, ties, randomized-score construction, and indicator argument.
 
 #### Dataset and Split
 
@@ -1516,6 +2363,55 @@ S(X_{n+1},Y_{n+1})
 \tau
 \}.
 ```
+
+Equivalently, for the notation:
+
+```math
+C_\tau(x)
+=
+\{
+y:
+S(x,y)\leq\tau
+\},
+```
+
+we have, for any realized `(x,y,\tau)`:
+
+```math
+y\in C_\tau(x)
+\quad\Longleftrightarrow\quad
+S(x,y)\leq\tau.
+```
+
+Therefore the random indicators are pointwise identical:
+
+```math
+\mathbf 1
+\{
+Y\in C_\tau(X)
+\}
+=
+\mathbf 1
+\{
+S(X,Y)\leq\tau
+\}.
+```
+
+Consequently:
+
+```math
+\mathbb P
+\left(
+Y\in C_\tau(X)
+\right)
+=
+\mathbb P
+\left(
+S(X,Y)\leq\tau
+\right).
+```
+
+This step comes from the definition of the prediction set. It is not a sampling approximation, not an empirical-CDF argument, and not a model-probability argument. The calibration/rank theorem is the separate ingredient that lower-bounds the right-hand probability when `\tau` is the conformal threshold.
 
 This equivalence is why conformal coverage can be proved by controlling the rank of the test true-label score.
 
@@ -2122,6 +3018,70 @@ indicator after realization
 
 Marginal validity does not imply uniform subgroup or conditional reliability. This distinction is critical for high-stakes and dynamic-system applications, where failure can concentrate in particular regimes.
 
+#### Two Different Meanings of Conditional Coverage
+
+**Derived clarification.** There are two different conditional notions that should not be collapsed.
+
+The first is conditional on the feature:
+
+```math
+\mathbb P
+\left(
+Y\in C(X)
+\mid
+X=x
+\right).
+```
+
+This is pointwise / feature-conditional coverage. Standard split conformal does not guarantee this is at least `1-\alpha` for every `x`.
+
+The second is conditional on the realized calibration set:
+
+```math
+\mathbb P
+\left(
+Y\in C(X)
+\mid
+D_{\mathrm{cal}}
+\right).
+```
+
+This asks whether a particular realized calibration set produced a threshold whose future population coverage is at least the target. Standard split conformal's basic finite-sample guarantee is also not generally this strong.
+
+The three-level framework is:
+
+```text
+marginal over future X,Y and random calibration set
+        v
+basic split-conformal guarantee
+
+conditional on X=x
+        v
+feature-conditional / pointwise coverage
+
+conditional on realized D_cal
+        v
+calibration-conditional future coverage
+```
+
+The first is the standard guarantee. The second and third are stronger statements and require additional assumptions, different methods, or extra analysis. The random-threshold statement:
+
+```math
+\mathbb E_{D_{\mathrm{cal}}}
+\left[
+\mathbb P
+\left(
+Y\in C(X)
+\mid
+D_{\mathrm{cal}}
+\right)
+\right]
+\geq
+1-\alpha
+```
+
+does not imply that the inside conditional probability is at least `1-\alpha` for every realized calibration set.
+
 #### Why Classifier Correct Specification Is Not Required
 
 The coverage proof does not rely on:
@@ -2358,6 +3318,201 @@ S(X,Y)
 
 This is the formal distribution-level reason adversarial perturbation breaks the ordinary true-label score rank structure.
 
+#### Adversarial Failure at the Level of the Proof
+
+**Derived explanation.** The clean proof begins with true-label scores:
+
+```math
+Z_i
+=
+S(X_i,Y_i),
+\qquad
+i=1,\ldots,n+1.
+```
+
+Exchangeability gives:
+
+```text
+permutation symmetry
+        v
+rank symmetry
+        v
+finite-sample quantile coverage
+```
+
+Now attack only the test point. Write:
+
+```math
+\widetilde X_{n+1}
+=
+X_{n+1}
++
+\Delta(X_{n+1}),
+```
+
+with:
+
+```math
+\|\Delta(X_{n+1})\|_2
+\leq
+\epsilon.
+```
+
+The actual test true-label score becomes:
+
+```math
+\widetilde Z_{n+1}
+=
+S
+\left(
+\widetilde X_{n+1},
+Y_{n+1}
+\right).
+```
+
+The calibration scores remain:
+
+```math
+Z_i
+=
+S(X_i,Y_i),
+\qquad
+i=1,\ldots,n.
+```
+
+Thus the rank proof would now need symmetry for:
+
+```math
+Z_1,\ldots,Z_n,\widetilde Z_{n+1}.
+```
+
+There is generally no reason this sequence should be exchangeable.
+
+At the score-distribution level, the clean score law is:
+
+```math
+F_Z(t)
+=
+\mathbb P
+\left(
+S(X,Y)\leq t
+\right).
+```
+
+If the attack map is:
+
+```math
+A(x)
+=
+x+\Delta(x),
+```
+
+then the attacked score law is:
+
+```math
+F_{\widetilde Z}(t)
+=
+\mathbb P
+\left(
+S(A(X),Y)\leq t
+\right).
+```
+
+In general:
+
+```math
+F_{\widetilde Z}
+\neq
+F_Z,
+```
+
+so:
+
+```math
+\widetilde Z
+\not\overset{d}{=}
+Z.
+```
+
+Therefore:
+
+```math
+Z_1,\ldots,Z_n,\widetilde Z_{n+1}
+```
+
+no longer has the clean conformal proof's permutation symmetry. The key no-tie rank equality:
+
+```math
+\mathbb P
+\left(
+R_{n+1}=r
+\right)
+=
+\frac1{n+1}
+```
+
+has no reason to remain true.
+
+Independence is not the main point. If:
+
+```math
+\widetilde X
+=
+A(X)
+```
+
+depends only on the test point, then `\widetilde X` may still be independent of the calibration data. Thus it is possible that:
+
+```text
+independence survives
+but
+identical distribution / exchangeability fails
+```
+
+The conformal rank theorem fails because it needs the pooled score symmetry, not merely test-calibration independence.
+
+**Pedagogical attack counterexample.** Suppose a clean score has:
+
+```math
+Z
+\sim
+\mathrm{Uniform}(0,1).
+```
+
+For a large calibration sample, the 90 percent clean threshold is intuitively:
+
+```math
+\tau
+\approx
+0.9.
+```
+
+Let an attack inflate the score as:
+
+```math
+\widetilde Z
+=
+\min(Z+0.2,1).
+```
+
+Then:
+
+```math
+\mathbb P
+\left(
+\widetilde Z\leq0.9
+\right)
+=
+\mathbb P
+\left(
+Z\leq0.7
+\right)
+=
+0.7.
+```
+
+The target 90 percent coverage can drop to 70 percent. This is not a paper experiment or theorem; it is a distribution-level illustration that a clean threshold does not automatically control attacked-score coverage.
+
 #### HPS Attack Toy Example
 
 **Pedagogical toy example.** Suppose the calibration true-label scores are:
@@ -2490,7 +3645,548 @@ certified score-inflation bound
 adversarial membership
 ```
 
-This is where the next formal reading unit should begin. Even though the prerequisite section already previewed randomized smoothing intuition, the formal Eq. (6)-(11) derivation and the exact paper-level expression for `M_\epsilon` remain deferred to Section 2.2.
+This is the abstract bridge that Section 2.2 original RSCP instantiates with Gaussian randomized smoothing.
+
+### Section 2.2 - Original RSCP
+
+#### Role in the Paper
+
+**[已有方案] RSCP.** Original RSCP is prior machinery that P-ROB-001 builds on and then criticizes. It is not the new contribution of this paper.
+
+Original RSCP does not try to restore:
+
+```text
+attacked-score exchangeability
+```
+
+between clean calibration scores and the attacked test score. Instead it uses:
+
+```text
+clean conformal event
++
+pointwise robust transfer bound
+```
+
+to certify the attacked prediction set.
+
+#### Generic Robust Transfer
+
+Suppose a robust score satisfies the pointwise inflation certificate:
+
+```math
+\widetilde S(\widetilde x,y)
+\leq
+\widetilde S(x,y)
++
+M_\epsilon
+```
+
+for every:
+
+```math
+\|\widetilde x-x\|_2
+\leq
+\epsilon.
+```
+
+Let the clean conformal event be:
+
+```math
+E_{\mathrm{clean}}
+=
+\{
+\widetilde S(X,Y)\leq\tau
+\}.
+```
+
+Let the robust event be:
+
+```math
+E_{\mathrm{robust}}
+=
+\{
+\widetilde S(\widetilde X,Y)
+\leq
+\tau+M_\epsilon
+\}.
+```
+
+The pointwise robustness implication gives:
+
+```math
+E_{\mathrm{clean}}
+\subseteq
+E_{\mathrm{robust}}.
+```
+
+Therefore:
+
+```math
+\mathbb P
+\left(
+E_{\mathrm{robust}}
+\right)
+\geq
+\mathbb P
+\left(
+E_{\mathrm{clean}}
+\right)
+\geq
+1-\alpha.
+```
+
+This is the probability structure behind original RSCP's threshold inflation result.
+
+#### Two Ingredients in the Robust Coverage Proof
+
+The statistical ingredient is:
+
+```math
+\mathbb P
+\left(
+E_{\mathrm{clean}}
+\right)
+\geq
+1-\alpha.
+```
+
+It comes from:
+
+```text
+exchangeability
++
+conformal calibration
+```
+
+on clean robust scores.
+
+The geometric / robustness ingredient is:
+
+```math
+E_{\mathrm{clean}}
+\subseteq
+E_{\mathrm{robust}}.
+```
+
+It comes from:
+
+```text
+pointwise score perturbation certificate
+```
+
+under the allowed adversarial perturbation set.
+
+Thus robust coverage is not obtained by rerunning conformal prediction on attacked data. The chain is:
+
+```text
+clean statistical validity
++
+pointwise adversarial transfer
+        v
+robust coverage
+```
+
+#### Gaussian-Specific Certificate
+
+The generic quantity:
+
+```math
+M_\epsilon
+```
+
+means the worst-case certified score inflation under the threat radius `\epsilon`.
+
+For Gaussian randomized smoothing with covariance `\sigma^2I_p`, the transformed score:
+
+```math
+\widetilde S(x,y)
+=
+\Phi^{-1}
+\left(
+S_{\mathrm{RS}}(x,y)
+\right)
+```
+
+has:
+
+```math
+\left|
+\widetilde S(x+\Delta,y)
+-
+\widetilde S(x,y)
+\right|
+\leq
+\frac{\|\Delta\|_2}{\sigma}.
+```
+
+If:
+
+```math
+\|\Delta\|_2
+\leq
+\epsilon,
+```
+
+then:
+
+```math
+M_\epsilon
+=
+\frac{\epsilon}{\sigma}.
+```
+
+The adjusted RSCP threshold is therefore:
+
+```math
+\tau_{\mathrm{adj}}
+=
+\tau
++
+\frac{\epsilon}{\sigma}.
+```
+
+The margin is `\epsilon/\sigma`, not `\sigma\epsilon`.
+
+#### Section 2.2 First-Pass Chain
+
+The original RSCP pipeline is:
+
+```text
+[问题]
+attacked score no longer exchangeable with clean calibration scores
+
+        v
+
+[RSCP workaround]
+construct a smoothed transformed score
+
+        v
+
+Gaussian randomized smoothing
+
+        v
+
+1/sigma Lipschitz certificate
+
+        v
+
+||Delta|| <= epsilon
+
+        v
+
+score inflation <= epsilon/sigma
+
+        v
+
+threshold inflation
+tau_adj = tau + epsilon/sigma
+
+        v
+
+clean membership implies attacked membership
+
+        v
+
+robust marginal coverage
+```
+
+This completes the first-pass understanding of original RSCP as an existing population-level robust conformal construction.
+
+### Section 3 Transition - Original RSCP Criticism and RSCP+
+
+#### Challenge 1 - Why the Original RSCP Certificate Fails in Practice
+
+**[本文否定].** The theoretical RSCP object is:
+
+```math
+S_{\mathrm{RS}}(x,y)
+=
+\mathbb E_Z
+\left[
+S(x+Z,y)
+\right].
+```
+
+The implemented object is:
+
+```math
+\widehat S_{\mathrm{RS}}(x,y)
+=
+\frac1{N_{\mathrm{MC}}}
+\sum_{j=1}^{N_{\mathrm{MC}}}
+S(x+Z_j,y),
+```
+
+where:
+
+```math
+Z_j
+\overset{\mathrm{i.i.d.}}{\sim}
+\mathcal N(0,\sigma^2I_p).
+```
+
+The statement:
+
+```math
+\widehat S_{\mathrm{RS}}
+\approx
+S_{\mathrm{RS}}
+```
+
+is numerical / asymptotic intuition. A formal certificate needs finite-sample high-probability control such as:
+
+```math
+\mathbb P
+\left(
+\left|
+\widehat S_{\mathrm{RS}}
+-
+S_{\mathrm{RS}}
+\right|
+\leq b
+\right)
+\geq
+1-\beta.
+```
+
+The Law of Large Numbers convergence statement does not equal a finite-`N_{\mathrm{MC}}` high-probability robustness certificate.
+
+Single-point Monte Carlo error is not the deepest difficulty. Because:
+
+```math
+S(x+Z_j,y)
+\in
+[0,1],
+```
+
+one pointwise MC estimate can be controlled by Hoeffding. The original RSCP threshold-level issue is that the ideal calibration threshold depends on:
+
+```math
+S_{\mathrm{RS},1},
+\ldots,
+S_{\mathrm{RS},n},
+```
+
+while implementation has only:
+
+```math
+\widehat S_{\mathrm{RS},1},
+\ldots,
+\widehat S_{\mathrm{RS},n}.
+```
+
+If one tries to prove that the entire estimated calibration threshold safely approximates the ideal threshold, one must control calibration-set-wide Monte Carlo errors.
+
+The Appendix A.1-style warning example is:
+
+```math
+n=10000.
+```
+
+If each pointwise MC event is controlled with confidence:
+
+```math
+0.999,
+```
+
+then naively requiring all independent pointwise events to hold gives:
+
+```math
+(0.999)^{10000}
+\approx
+4.5\times10^{-5}.
+```
+
+This does not prove every simultaneous confidence method must fail. It shows that naive pointwise control of every calibration Monte Carlo approximation can become catastrophically weak.
+
+#### RSCP+ Conceptual Move
+
+**[本文方案 1] RSCP+.** The paper's conceptual move is not:
+
+```text
+first reconstruct ideal S_RS for every calibration point
+```
+
+and then calibrate. Instead, it defines the implemented Monte Carlo estimator itself as the conformal score:
+
+```math
+\widehat S_{\mathrm{RS}}
+```
+
+and computes the calibration threshold:
+
+```math
+\tau_{\mathrm{MC}}
+```
+
+directly from:
+
+```math
+\widehat S_{\mathrm{RS},1},
+\ldots,
+\widehat S_{\mathrm{RS},n}.
+```
+
+This removes the calibration-side approximation layer:
+
+```text
+estimated calibration scores
+        v
+unknown ideal calibration scores
+        v
+estimated ideal quantile
+```
+
+from the conformal-validity part of the proof.
+
+The randomized score is legitimate because Appendix A.2 shows that, if:
+
+```math
+\widehat S_{\mathrm{RS}}(X_i,Y_i)
+=
+\frac1{N_{\mathrm{MC}}}
+\sum_j
+S(X_i+Z_{ij},Y_i),
+```
+
+and the data and Monte Carlo samples are generated symmetrically across calibration and test examples, then these randomized scores are exchangeable. Clean conformal calibration can therefore be applied directly to:
+
+```math
+\widehat S_{\mathrm{RS}}.
+```
+
+RSCP+ does not make:
+
+```math
+S_{\mathrm{RS}}
+```
+
+disappear. It removes `S_{\mathrm{RS}}` as the object that must be reconstructed for every calibration score before conformal calibration. But `S_{\mathrm{RS}}` still appears in the robustness proof as a population bridge between clean and attacked Monte Carlo estimators.
+
+The bookkeeping is:
+
+```text
+calibration object:
+hat S_RS
+
+mathematical bridge:
+S_RS
+```
+
+#### Theorem 1 Dependency Preparation
+
+**Theorem 1 dependency preparation - proof not yet completed.** The next theorem needs three bridges:
+
+```text
+computed clean MC score
+hat S_RS(clean)
+        |
+        | Hoeffding
+        v
+population clean smoothed score
+S_RS(clean)
+        |
+        | Gaussian randomized smoothing
+        v
+population attacked smoothed score
+S_RS(attacked)
+        |
+        | Hoeffding
+        v
+computed attacked MC score
+hat S_RS(attacked)
+```
+
+This diagram is a dependency graph. The exact inequality directions and probability bookkeeping are Theorem 1 work and are not fully proved in this update.
+
+The inequality directions to track next are:
+
+**Clean Monte Carlo bridge.**
+
+```math
+S_{\mathrm{RS}}(x,y)
+\leq
+\widehat S_{\mathrm{RS}}(x,y)
++
+b_{\mathrm{Hoef}}(\beta).
+```
+
+**Population robustness bridge.**
+
+```math
+S_{\mathrm{RS}}(\widetilde x,y)
+\leq
+\Phi
+\left[
+\Phi^{-1}
+\left(
+S_{\mathrm{RS}}(x,y)
+\right)
++
+\frac{\epsilon}{\sigma}
+\right].
+```
+
+**Attacked Monte Carlo bridge.**
+
+```math
+\widehat S_{\mathrm{RS}}(\widetilde x,y)
+-
+b_{\mathrm{Hoef}}(\beta)
+\leq
+S_{\mathrm{RS}}(\widetilde x,y).
+```
+
+There are two separate costs.
+
+The adversarial geometric cost is:
+
+```math
+\frac{\epsilon}{\sigma}.
+```
+
+It comes from Gaussian randomized-smoothing robustness geometry.
+
+The Monte Carlo statistical cost is:
+
+```math
+b_{\mathrm{Hoef}}(\beta)
+=
+\sqrt{
+\frac{-\ln\beta}
+{2N_{\mathrm{MC}}}
+}.
+```
+
+It comes from finite Monte Carlo concentration. Theorem 1 is the first place these two costs are formally combined. The theorem's probability level, including the role of `1-2\beta`, must be tracked over the relevant Monte Carlo randomness in the full proof next.
+
+At the statement-preparation level, the three bridges point toward a certificate of the following form for a fixed `(x,y)` and an allowed perturbation `\widetilde x`:
+
+```math
+\widehat S_{\mathrm{RS}}(\widetilde x,y)
+\leq
+\Phi
+\left[
+\Phi^{-1}
+\left(
+\widehat S_{\mathrm{RS}}(x,y)
++
+b_{\mathrm{Hoef}}(\beta)
+\right)
++
+\frac{\epsilon}{\sigma}
+\right]
++
+b_{\mathrm{Hoef}}(\beta)
+```
+
+with probability at least:
+
+```math
+1-2\beta
+```
+
+over the finite Monte Carlo sampling events used for the clean and attacked estimators. This is not yet the full Theorem 1 proof. The next reading unit must check the paper's exact statement, any domain or clipping convention needed for the argument of `\Phi^{-1}`, the independence assumptions for the two concentration events, monotonicity, and the union bound.
 
 ---
 
@@ -2498,51 +4194,94 @@ This is where the next formal reading unit should begin. Even though the prerequ
 
 **Current reading roadmap and status.** This is not a completed-paper record.
 
-1. Stage 1 - Vanilla split conformal prediction: first-pass research understanding substantially complete.
-2. Stage 2 - Randomized smoothed conformal prediction: ready / beginning; prerequisite intuition only; full Section 2.2 deferred.
-3. Stage 3 - RSCP theory-implementation gap: conceptual motivation recorded; formal details deferred.
-4. Stage 4 - RSCP+ and Theorem 1: not completed.
-5. Stage 5 - Corollary 2: not completed; Appendix A.2 proposition recorded only as a future dependency.
-6. Stage 6 - Concentration bounds: Hoeffding background recorded; Empirical Bernstein deferred.
-7. Stage 7 - Robust prediction-set inflation: conceptual threshold inflation recorded; full robust coverage transfer deferred.
-8. Stage 8 - PTT: rank transformation: not completed.
-9. Stage 9 - PTT: sigmoid transformation: not completed.
-10. Stage 10 - PTT theory and failure modes: not completed.
-11. Stage 11 - Robust conformal training: not completed.
-12. Stage 12 - Experiments: not read.
-13. Stage 13 - Ablations: not read.
-14. Stage 14 - Research-level critique: not final.
-15. Stage 15 - Dynamic-system transfer: boundary-level interpretation recorded, not a method transfer proof.
+1. Stage 1 - Vanilla split conformal prediction: first-pass research understanding complete.
+2. Stage 2 - Original randomized smoothed conformal prediction: first-pass research understanding complete.
+3. Stage 3 - RSCP theory-implementation gap: Section 3 motivation first-pass complete.
+4. Stage 4 - RSCP+ conceptual redesign: first-pass complete; full Theorem 1 proof not completed.
+5. Stage 5 - Theorem 1: statement/dependency preparation complete; full proof deferred.
+6. Stage 6 - Corollary 2: not completed; Appendix A.2 proposition recorded only as a future dependency.
+7. Stage 7 - Concentration bounds: Hoeffding background recorded; Empirical Bernstein deferred.
+8. Stage 8 - Robust prediction-set inflation: original RSCP threshold inflation understood; RSCP+ Corollary 2 robust coverage transfer deferred.
+9. Stage 9 - PTT: rank transformation: not completed.
+10. Stage 10 - PTT: sigmoid transformation: not completed.
+11. Stage 11 - PTT theory and failure modes: not completed.
+12. Stage 12 - Robust conformal training: not completed.
+13. Stage 13 - Experiments: not read.
+14. Stage 14 - Ablations: not read.
+15. Stage 15 - Research-level critique: not final.
+16. Stage 16 - Dynamic-system transfer: boundary-level interpretation recorded, not a method transfer proof.
 
 ### Current Method Map
+
+The paper-role navigation system is:
+
+```text
+[背景] Standard Conformal Prediction
+
+        v
+
+[问题] Adversarial perturbation breaks the ordinary
+clean calibration/test exchangeability argument
+
+        v
+
+[已有方案] RSCP
+Randomized smoothing + threshold inflation
+
+        v
+
+[本文否定 / Challenge 1]
+Original RSCP's practical robustness certificate
+does not properly account for finite Monte Carlo estimation
+
+        v
+
+[本文方案 1] RSCP+
+Treat the Monte Carlo estimator itself as the conformal score
+and derive a new robustness bridge
+
+        v
+
+[剩余问题 / Challenge 2]
+Certified robust sets become overly conservative / trivial
+
+        v
+
+[本文方案 2]
+PTT + RCT improve prediction-set efficiency
+```
 
 The method logic to keep in mind is:
 
 ```text
-clean split conformal
+[背景] clean split conformal
         v
 rank coverage from exchangeable true-label scores
         v
-test-time adversarial input changes test-score distribution
+[问题] test-time adversarial input changes test-score distribution
         v
-randomized smoothing creates a perturbation-controlled population score
+[已有方案] randomized smoothing creates a perturbation-controlled population score
         v
 finite Monte Carlo estimator is the implemented score
         v
-RSCP+ should certify the implemented randomized score
+[本文否定] original RSCP does not fully certify the implemented estimator
+        v
+[本文方案 1] RSCP+ calibrates the implemented randomized score
+        v
+Theorem 1 must bridge clean MC, population smoothing, and attacked MC
         v
 robust threshold inflation can hurt set efficiency
         v
-PTT / RCT are later efficiency mechanisms
+[本文方案 2] PTT / RCT are later efficiency mechanisms
 ```
 
-The clean split conformal part is now developed through target coverage semantics, finite-sample rank derivation, empirical quantile construction, marginal coverage meaning, efficiency interpretation, and the adversarial failure transition. Section 2.2 is ready to begin but has not been completed.
+The clean split conformal part is now developed through target coverage semantics, finite-sample rank derivation, empirical threshold versus population quantile, random-threshold probability semantics, marginal/conditional distinctions, efficiency interpretation, and the adversarial failure transition. Section 2.2 original RSCP and Section 3 RSCP+ motivation are first-pass complete. Theorem 1 is prepared only as a dependency graph; the full proof remains the next active unit.
 
 ---
 
 ## 7. Key Equations and Derivations
 
-This section records derivations that are now structurally important. It intentionally does not complete Theorem 1 or the later robust coverage proof.
+This section records derivations that are now structurally important. It intentionally does not complete the full Theorem 1 proof or the later RSCP+ Corollary 2 robust coverage proof.
 
 ### Vanilla CP Coverage Proof Chain
 
@@ -2577,6 +4316,340 @@ S(X_{n+1},Y_{n+1})\leq\tau
 ```
 
 The rank argument controls the right-hand event. The conformal prediction guarantee is then transferred to the left-hand membership event by definition of the prediction set.
+
+### Random Empirical Threshold Versus Population Quantile
+
+After conditioning on fixed training data and a fixed score rule `S`, define:
+
+```math
+Z_i
+=
+S(X_i,Y_i),
+\qquad
+i=1,\ldots,n+1.
+```
+
+The population score CDF is:
+
+```math
+F_Z(t)
+=
+\mathbb P
+\left(
+S(X,Y)\leq t
+\right).
+```
+
+A known population quantile would give a direct population statement, but conformal calibration uses the random empirical threshold:
+
+```math
+\tau
+=
+\tau(D_{\mathrm{cal}}).
+```
+
+The finite-sample statement is:
+
+```math
+\mathbb P_{D_{\mathrm{cal}},(X_{n+1},Y_{n+1})}
+\left[
+S(X_{n+1},Y_{n+1})
+\leq
+\tau(D_{\mathrm{cal}})
+\right]
+\geq
+1-\alpha.
+```
+
+Equivalently:
+
+```math
+\mathbb E_{D_{\mathrm{cal}}}
+\left[
+\mathbb P_{(X,Y)\sim P_{XY}}
+\left(
+S(X,Y)
+\leq
+\tau(D_{\mathrm{cal}})
+\mid
+D_{\mathrm{cal}}
+\right)
+\right]
+\geq
+1-\alpha.
+```
+
+This is a joint finite-sample rank guarantee. It is not a claim that every realized calibration set satisfies:
+
+```math
+F_Z
+\left(
+\tau(D_{\mathrm{cal}})
+\right)
+\geq
+1-\alpha.
+```
+
+The proof paradigm distinction is:
+
+```text
+ordinary quantile estimation:
+empirical CDF approximates population CDF
+
+conformal rank logic:
+future score has no privileged pooled rank
+```
+
+### Adversarial Proof-Chain Failure
+
+Clean conformal needs exchangeability of:
+
+```math
+Z_1,\ldots,Z_n,Z_{n+1}.
+```
+
+After attacking only the test point, the proof would need symmetry for:
+
+```math
+Z_1,\ldots,Z_n,\widetilde Z_{n+1},
+```
+
+where:
+
+```math
+\widetilde Z_{n+1}
+=
+S(\widetilde X_{n+1},Y_{n+1}).
+```
+
+The clean score law:
+
+```math
+F_Z(t)
+=
+\mathbb P
+\left(
+S(X,Y)\leq t
+\right)
+```
+
+and attacked score law:
+
+```math
+F_{\widetilde Z}(t)
+=
+\mathbb P
+\left(
+S(A(X),Y)\leq t
+\right)
+```
+
+are generally unequal. Thus the rank-symmetry equality:
+
+```math
+\mathbb P
+\left(
+R_{n+1}=r
+\right)
+=
+\frac1{n+1}
+```
+
+is the step that loses its justification. Independence from calibration data can survive, but exchangeability can still fail.
+
+### Gaussian Probit Geometry and Original RSCP Transfer
+
+For Gaussian smoothing:
+
+```math
+Z\sim\mathcal N(0,\sigma^2I_p),
+\qquad
+u
+=
+\frac{\Delta}{\|\Delta\|_2}.
+```
+
+The attack shifts only the parallel coordinate:
+
+```math
+u^\top(Z+\Delta)
+=
+u^\top Z
++
+\|\Delta\|_2.
+```
+
+After standardization:
+
+```math
+T_{\mathrm{attacked}}
+\sim
+\mathcal N
+\left(
+\frac{\|\Delta\|_2}{\sigma},
+1
+\right).
+```
+
+This produces the Gaussian smoothing bridge:
+
+```math
+S_{\mathrm{RS}}(x+\Delta,y)
+\leq
+\Phi
+\left[
+\Phi^{-1}
+\left(
+S_{\mathrm{RS}}(x,y)
+\right)
++
+\frac{\|\Delta\|_2}{\sigma}
+\right].
+```
+
+After the probit transform:
+
+```math
+\widetilde S(x,y)
+=
+\Phi^{-1}
+\left(
+S_{\mathrm{RS}}(x,y)
+\right),
+```
+
+the nonlinear probability-space shift becomes additive:
+
+```math
+\widetilde S(x+\Delta,y)
+\leq
+\widetilde S(x,y)
++
+\frac{\|\Delta\|_2}{\sigma}.
+```
+
+Therefore the original RSCP threshold inflation is:
+
+```math
+\tau_{\mathrm{adj}}
+=
+\tau
++
+\frac{\epsilon}{\sigma}.
+```
+
+The generic robust-transfer statement is:
+
+```math
+E_{\mathrm{clean}}
+\subseteq
+E_{\mathrm{robust}},
+\qquad
+\mathbb P(E_{\mathrm{robust}})
+\geq
+\mathbb P(E_{\mathrm{clean}})
+\geq
+1-\alpha.
+```
+
+### RSCP+ and Theorem 1 Dependency Graph
+
+RSCP+ calibrates the implemented randomized score:
+
+```math
+\widehat S_{\mathrm{RS}}(X_i,Y_i)
+=
+\frac1{N_{\mathrm{MC}}}
+\sum_j
+S(X_i+Z_{ij},Y_i)
+```
+
+directly, rather than first certifying every calibration estimate as an approximation to the ideal `S_{\mathrm{RS}}`.
+
+Theorem 1 must then connect:
+
+```text
+hat S_RS(clean)
+        v
+S_RS(clean)
+        v
+S_RS(attacked)
+        v
+hat S_RS(attacked)
+```
+
+through three bridges:
+
+```math
+S_{\mathrm{RS}}(x,y)
+\leq
+\widehat S_{\mathrm{RS}}(x,y)
++
+b_{\mathrm{Hoef}}(\beta),
+```
+
+```math
+S_{\mathrm{RS}}(\widetilde x,y)
+\leq
+\Phi
+\left[
+\Phi^{-1}
+\left(
+S_{\mathrm{RS}}(x,y)
+\right)
++
+\frac{\epsilon}{\sigma}
+\right],
+```
+
+and:
+
+```math
+\widehat S_{\mathrm{RS}}(\widetilde x,y)
+-
+b_{\mathrm{Hoef}}(\beta)
+\leq
+S_{\mathrm{RS}}(\widetilde x,y).
+```
+
+Here:
+
+```math
+b_{\mathrm{Hoef}}(\beta)
+=
+\sqrt{
+\frac{-\ln\beta}
+{2N_{\mathrm{MC}}}
+}.
+```
+
+The statement-level target suggested by these bridges is:
+
+```math
+\widehat S_{\mathrm{RS}}(\widetilde x,y)
+\leq
+\Phi
+\left[
+\Phi^{-1}
+\left(
+\widehat S_{\mathrm{RS}}(x,y)
++
+b_{\mathrm{Hoef}}(\beta)
+\right)
++
+\frac{\epsilon}{\sigma}
+\right]
++
+b_{\mathrm{Hoef}}(\beta)
+```
+
+with probability:
+
+```math
+1-2\beta.
+```
+
+This is only Theorem 1 dependency preparation. The union bound, monotonicity manipulations, exact confidence event, and implementation interpretation remain the next proof unit.
 
 ### Why the Intuitive Rank Proof and the Appendix A.2 Proof Both Stay
 
@@ -2842,7 +4915,7 @@ This proposition is a future dependency for Corollary 2. In this update it is re
 
 ## 8. Assumptions
 
-Each assumption must be tied to a theorem, algorithm step, experiment, or implementation requirement. Current confirmed assumptions are limited to the foundational layers above.
+Each assumption must be tied to a theorem, algorithm step, experiment, or implementation requirement. Current confirmed assumptions are limited to the foundational layers, original RSCP first pass, and RSCP+ transition above.
 
 ### Vanilla CP Validity Ledger
 
@@ -2880,6 +4953,8 @@ It does not imply:
 * The empirical quantile correction accounts for a pooled rank space of size `n+1`.
 * Calibration scores must be true-label scores, because the coverage event is a true-label score threshold event.
 * Marginal coverage is the target in Section 2.1; pointwise conditional coverage is not automatically guaranteed.
+* Basic split conformal also does not generally guarantee calibration-conditional future coverage for every realized `D_{\mathrm{cal}}`.
+* The conformal threshold `\tau(D_{\mathrm{cal}})` is a random variable.
 * Randomized scores remain valid only when the randomized scoring procedure is applied symmetrically and independently as required.
 
 ### Robustness and Geometry Assumptions
@@ -2887,14 +4962,16 @@ It does not imply:
 * Adversarial perturbation is represented as `\Delta` with an `L_2` constraint.
 * `\Delta` is not assumed Gaussian, mean-zero, or random.
 * Gaussian smoothing uses `Z\sim\mathcal N(0,\sigma^2 I_p)`.
+* Gaussian smoothing geometry uses the standardized displacement `\|\Delta\|_2/\sigma`.
 * The randomized smoothing relation gives an `\epsilon/\sigma` population-level score inflation bound.
-* Full robust coverage transfer is deferred to RSCP/RSCP+ sections.
+* Original RSCP combines clean conformal validity with pointwise robust transfer; RSCP+ full robust coverage remains deferred to Theorem 1/Corollary 2.
 
 ### Randomization and Computation Assumptions
 
 * The base score is bounded in `[0,1]` for Hoeffding-style concentration.
 * Monte Carlo smoothing samples are independent of the data and of each other under Lemma A.1.
 * `S_{\mathrm{RS}}` is a population expectation; `\widehat S_{\mathrm{RS},N_{\mathrm{MC}}}` is a finite random estimator.
+* RSCP+ treats `\widehat S_{\mathrm{RS},N_{\mathrm{MC}}}` itself as the conformal score, while still using `S_{\mathrm{RS}}` as a robustness bridge.
 * Theorem 1-level confidence/union-bound bookkeeping remains deferred.
 
 ### Model and Training Assumptions
@@ -2937,10 +5014,12 @@ This section is not a final critique. It records limitation categories that alre
 ### Currently Supported Boundaries
 
 * Section 2.1 split conformal validity is marginal, not pointwise conditional validity.
+* Basic split conformal validity averages over the random calibration set; it is not generally a guarantee for every realized calibration threshold.
 * Clean conformal validity relies on exchangeability of true-label scores.
 * Test-time adversarial perturbation can break the clean calibration/test score symmetry even if independence from calibration data survives.
 * Randomized smoothing population guarantees are not the same as finite Monte Carlo implementation guarantees.
 * Naive pointwise Monte Carlo confidence control over every calibration score can become severely conservative.
+* Original RSCP's margin is `\epsilon/\sigma` for Gaussian smoothing; confusing it with `\sigma\epsilon` changes the certificate scale.
 * Prediction-set validity and prediction-set usefulness are separate.
 
 ### Marginal-Not-Conditional Limitation
@@ -3140,17 +5219,17 @@ Therefore RSCP+ should not be directly transplanted to spatiotemporal forecastin
 
 ## 13. Transferable Intuitions
 
-Current status: foundational intuitions supported; later method-specific intuitions still deferred.
+Current status: foundational, original RSCP, and RSCP+ transition intuitions supported; later efficiency mechanisms still deferred.
 
 | Candidate Intuition | Why It May Matter | Verification Needed |
 | --- | --- | --- |
-| Finite-sample calibration should be tied to the actual deployed random object | Prevents theory from proving a guarantee for a quantity different from the implementation | Foundation established; verify full RSCP+ proof next |
+| Finite-sample calibration should be tied to the actual deployed random object | Prevents theory from proving a guarantee for a quantity different from the implementation | RSCP+ conceptual move established; verify full Theorem 1 proof next |
 | Randomness accounting is part of reliability | Data randomness, APS randomization, Gaussian smoothing, Monte Carlo sampling, and adversarial perturbation play different roles | Foundation established |
 | Target coverage is a requirement, not a model belief | Prevents confusing `1-\alpha` with classifier accuracy or per-instance confidence | Foundation established |
 | Validity and intelligence are different | A full label set can be valid but useless | Foundation established |
-| Certificates can trade informativeness for safety | Robust threshold inflation can enlarge sets | Verify set-size mechanism and experiments |
-| Score geometry matters | True-label and wrong-label score separation affects set size under the same coverage target | Foundation established; PTT details deferred |
-| Clean-to-attacked transfer is a separate proof obligation | Adversarial test scores generally do not inherit clean exchangeable rank symmetry | Foundation established; Section 2.2 begins next |
+| Certificates can trade informativeness for safety | Robust threshold inflation can enlarge sets | Original RSCP mechanism established; later efficiency methods deferred |
+| Score geometry matters | True-label and wrong-label score separation affects set size under the same coverage target | Foundation and Gaussian geometry established; PTT details deferred |
+| Clean-to-attacked transfer is a separate proof obligation | Adversarial test scores generally do not inherit clean exchangeable rank symmetry | Original RSCP transfer established; RSCP+ proof next |
 | Training surrogates are not automatically final guarantees | Differentiable objectives may optimize a proxy rather than the exact conformal set | Read RCT and final guarantee relationship |
 
 These intuitions should guide later reading without being upgraded into final paper claims prematurely.
@@ -3207,7 +5286,7 @@ Before recording a question as research-worthy, check:
 
 This paper should help build advisor-level reading discipline for trustworthy ML and Tsui-Wei Weng / Lily Weng related research style, but only through technical reconstruction rather than superficial evaluation.
 
-### After This Foundations Update
+### After This Foundations and RSCP Transition Update
 
 I should now be able to explain:
 
@@ -3242,14 +5321,35 @@ I should now be able to explain:
 29. why LLN and conformal rank coverage have different proof roles;
 30. why adversarial attack breaks ordinary score-rank symmetry;
 31. why RSCP needs a separate clean-to-attacked score transfer bridge;
-32. why validity, robustness, prediction-set efficiency, and computational efficiency must stay separate.
+32. why validity, robustness, prediction-set efficiency, and computational efficiency must stay separate;
+33. why the empirical calibration threshold is not assumed to equal the population quantile;
+34. why `\tau(D_{\mathrm{cal}})` is a random variable;
+35. why split conformal coverage averages over calibration-set randomness and the future test point;
+36. why standard split conformal does not generally give conditional population coverage for every realized `D_{\mathrm{cal}}`;
+37. why empirical-quantile estimation and conformal-rank validity are different proof paradigms;
+38. why the unknown population distribution does not block the finite-sample rank argument;
+39. how the clean conformal proof breaks at the rank-symmetry step under attacked test scores;
+40. why independence can survive while exchangeability fails;
+41. how original RSCP combines clean conformal validity with pointwise robust transfer;
+42. why original RSCP does not rerun conformal calibration on attacked data;
+43. why generic `M_\epsilon` becomes `\epsilon/\sigma` for Gaussian randomized smoothing;
+44. what it means to project Gaussian noise along the perturbation direction;
+45. why isotropic Gaussian geometry reduces the relevant shift to a one-dimensional coordinate;
+46. why standardization gives `\|\Delta\|_2/\sigma`;
+47. why `\Phi` appears in the smoothing theorem;
+48. why `\Phi^{-1}` linearizes the nonlinear Gaussian probability shift;
+49. what the original RSCP theoretical score and implemented score are;
+50. why large `N_{\mathrm{MC}}` alone is not a finite-sample certificate;
+51. why calibration thresholds create a simultaneous Monte Carlo control difficulty;
+52. why RSCP+ treats `\widehat S_{\mathrm{RS}}` itself as the conformal score;
+53. why `S_{\mathrm{RS}}` remains as a robustness bridge in RSCP+;
+54. which three bridges Theorem 1 must connect next.
 
 ### Still Deferred
 
 I should not yet claim I can fully explain:
 
-* Section 2.2 RSCP as presented by the paper;
-* Theorem 1;
+* full Theorem 1 proof;
 * Corollary 2;
 * Empirical Bernstein;
 * PTT;
@@ -3266,10 +5366,11 @@ I should not yet claim I can fully explain:
 | Completed first-pass research understanding: Part 0 whole-paper map | papers/P-ROB-001/note.md | Done |
 | Completed first-pass research understanding: Part 1 vanilla split conformal prediction | papers/P-ROB-001/note.md | Done |
 | Completed foundational randomness / Monte Carlo prerequisites | papers/P-ROB-001/note.md | Done |
-| Current transition: Section 2.1 to Section 2.2 | papers/P-ROB-001/note.md | Ready |
-| Begin next formal reading unit: Section 2.2 Eq. (6)-(11), score inflation to robust set construction to randomized smoothing certificate | papers/P-ROB-001/note.md | Next |
-| Reconstruct RSCP population score, perturbation relation, and prediction set only after Section 2.2 is read | Sections 5-8 and 16-18 as needed | Planned |
-| Keep Section 3, Theorem 1, Corollary 2, PTT, RCT, experiments, and critique deferred until their own scoped reading updates | This note | Planned |
+| Completed first-pass research understanding: Part 2 original RSCP | papers/P-ROB-001/note.md | Done |
+| Completed first-pass research understanding: Section 3 motivation and RSCP+ conceptual move | papers/P-ROB-001/note.md | Done |
+| Prepared Theorem 1 statement/dependency graph without completing proof | papers/P-ROB-001/note.md | Done |
+| Next formal reading unit: full Theorem 1 derivation | papers/P-ROB-001/note.md | Next |
+| Keep Corollary 2, Empirical Bernstein, PTT, RCT, experiments, and critique deferred until their own scoped reading updates | This note | Planned |
 | Verify primary-source metadata before adding DOI, OpenReview, arXiv, or code links | Section 1 | Planned |
 | Commit and push each narrowly scoped future reading update | Git repository | Planned |
 
@@ -3287,13 +5388,45 @@ v
 push
 ```
 
-Do not independently finish the whole paper.
+Do not independently finish the whole paper. The next active unit is Theorem 1 proof details only.
 
 ---
 
 ## 18. Completion Criteria
 
 **Current paper status:** Reading
+
+### Reading Status Ledger
+
+```text
+Part 0 - Whole-paper map
+COMPLETED first-pass
+
+Part 1 - Section 2.1 Standard Conformal Prediction
+COMPLETED first-pass
+
+Prerequisite probability/statistics layer
+COMPLETED first-pass
+
+Part 2 - Section 2.2 Original RSCP
+COMPLETED first-pass
+
+Section 3 motivation:
+Original RSCP practical certification flaw
+COMPLETED first-pass
+
+RSCP+ conceptual redesign
+COMPLETED first-pass
+
+Current location:
+Immediately before full Theorem 1 derivation
+
+Next:
+Theorem 1 - statement, probability space,
+Hoeffding clean side, Gaussian bridge,
+Hoeffding attacked side, monotonicity,
+union bound, tightness, implementation meaning.
+```
 
 ### Current Stage Completion Record
 
@@ -3304,9 +5437,12 @@ Do not independently finish the whole paper.
 * [x] Section 2.1 first-pass research understanding substantially complete
 * [x] Appendix A.2 randomized-score coverage proof skeleton preserved/organized
 * [x] Project-connection boundary clarified
-* [x] Section 2.2 ready / beginning state established
-* [ ] Section 2.2 Randomized Smoothed Conformal Prediction completed
-* [ ] Section 3 / Theorem 1 completed
+* [x] Empirical threshold versus population quantile distinction completed first-pass
+* [x] Random calibration threshold probability semantics completed first-pass
+* [x] Section 2.2 Randomized Smoothed Conformal Prediction completed first-pass
+* [x] Section 3 motivation and RSCP+ conceptual redesign completed first-pass
+* [x] Theorem 1 statement/dependency preparation completed
+* [ ] Theorem 1 full proof completed
 * [ ] Corollary 2 completed
 * [ ] PTT / RCT completed
 * [ ] Experiments completed
@@ -3320,23 +5456,36 @@ Mark this paper as `Completed` only after the following criteria are genuinely s
 * [x] Finite-sample corrected rank derived
 * [x] Empirical quantile correction derived
 * [x] Empirical quantile relation understood
+* [x] Empirical threshold vs population quantile distinction understood
+* [x] Random-threshold probability semantics understood
+* [x] Conditional-on-calibration-set distinction understood
 * [x] Coverage event equivalence understood
 * [x] HPS / APS role understood
 * [x] Marginal vs conditional coverage understood
 * [x] Classifier quality vs conformal validity understood
 * [x] Score choice / efficiency distinction understood
-* [ ] RSCP motivation understood
-* [ ] Randomized smoothing construction understood
-* [ ] Gaussian smoothing robustness relation understood
-* [ ] Population score vs Monte Carlo estimator distinction understood
-* [ ] Original RSCP certificate gap understood
+* [x] Adversarial exchangeability failure understood
+* [x] RSCP motivation understood
+* [x] Randomized smoothing construction understood
+* [x] Gaussian smoothing robustness relation understood
+* [x] Perturbation-direction projection geometry understood
+* [x] `\epsilon/\sigma` certificate origin understood
+* [x] Role of `\Phi` and `\Phi^{-1}` understood
+* [x] Original RSCP score-inflation logic understood
+* [x] Original RSCP idealized pipeline understood
+* [x] Population score vs Monte Carlo estimator distinction understood
+* [x] Original RSCP certificate gap understood
+* [x] Calibration-wide Monte Carlo estimation problem understood
+* [x] Randomized Monte Carlo score validity understood
+* [x] RSCP+ conceptual move understood
+* [x] Theorem 1 dependency graph prepared
 * [ ] RSCP+ Theorem 1 independently reconstructed
 * [ ] Probability space of Theorem 1 identified
-* [ ] Hoeffding bound derived
+* [ ] Theorem 1 clean-side Hoeffding step completed
 * [ ] Union-bound bookkeeping understood
 * [ ] Corollary 2 robust coverage logic reconstructed
 * [ ] Hoeffding vs empirical Bernstein analyzed
-* [ ] Robust prediction-set inflation mechanism understood
+* [x] Original RSCP robust prediction-set inflation mechanism understood
 * [ ] PTT ranking transformation understood
 * [ ] Rank transformation exchangeability argument understood
 * [ ] Sigmoid transformation geometry understood
@@ -3350,9 +5499,9 @@ Mark this paper as `Completed` only after the following criteria are genuinely s
 * [ ] Research-level critique completed
 * [ ] Dynamic-system transfer boundaries analyzed
 * [ ] Research questions passed quality-control filter
-* [ ] Markdown/math rendering verified
-* [ ] Note remains evidence-based
-* [ ] Repository boundary verified
+* [x] Markdown/math rendering verified
+* [x] Note remains evidence-based
+* [x] Repository boundary verified
 * [ ] Git working tree clean after completion
 
 This note remains an explicitly unfinished research container.
@@ -3362,18 +5511,18 @@ This note remains an explicitly unfinished research container.
 The next actual reading stage is:
 
 ```text
-Part 2 - Section 2.2: Randomized Smoothed Conformal Prediction
+Theorem 1 - full derivation
 ```
 
-The Part 2 reading order should be:
+The Theorem 1 reading order should be:
 
-1. paper's formal RSCP score definition;
-2. paper's notation for Gaussian smoothing and any adapted notation needed for clarity;
-3. population transformed score;
-4. perturbation certificate under `L_2` threat model;
-5. RSCP prediction set and threshold inflation;
-6. exact object used by the original RSCP theorem;
-7. exact object computed by finite Monte Carlo implementation;
-8. where Section 3 begins the RSCP+ motivation.
+1. statement and probability space;
+2. clean-side Hoeffding bridge;
+3. Gaussian population robustness bridge;
+4. attacked-side Hoeffding bridge;
+5. monotonicity through `\Phi` and `\Phi^{-1}`;
+6. union-bound bookkeeping;
+7. exact meaning of `1-2\beta`;
+8. implementation meaning and conservativeness.
 
-Stop before Theorem 1 until Section 2.2 and the RSCP implementation gap are genuinely understood.
+Stop before Corollary 2 until Theorem 1 is genuinely derived.
